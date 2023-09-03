@@ -1,52 +1,39 @@
-// function Home() {
-//   return <div>Hello World</div>;
-// }
-
-// export default Home;
-
-
 // index.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { ipcRenderer } from 'electron';
 
 export default function Home() {
-  // PDFのデータとサムネイルのステート
   const [pdfData, setPdfData] = useState<Blob | null>(null);
   const [thumbnail, setThumbnail] = useState<string | null>(null);  
+  const [fileList, setFileList] = useState<string[]>([]);
 
-  // PDFがドラッグ&ドロップされたときのハンドラ
+  const fetchFiles = async () => {
+    const files = await window.electron.invoke('get-temp-files');
+    setFileList(files);
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, []); // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
+
   const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    const files = event.dataTransfer.files;
+    const uploadedFiles = [];
 
-    // ドロップされたファイルを取得
-    const pdfFile = event.dataTransfer.files[0];
-    const pdfBuffer = await pdfFile.arrayBuffer();
-
-    // ファイルのデータをFormDataとしてAPIに送信
-    const formData = new FormData();
-    formData.append('pdf', new Blob([pdfBuffer]));
-
-    try {
-      // APIにPOSTリクエストを送信し、加工後のPDFを取得
-      const response = await axios.post('/api/process-pdf', formData, {
-        responseType: 'arraybuffer',
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileBuffer = await file.arrayBuffer();
+      const filePath = await window.electron.invoke('save-to-temp', fileBuffer);
+      uploadedFiles.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        path: filePath
       });
-
-      console.log("API Response Content-Type:", response.headers['content-type']);
-
-      console.log("API Response:", response); // 追加されたログ
-      const apiResponseData = new Uint8Array(response.data);
-      console.log("API Response Data (first bytes):", apiResponseData.slice(0, 10));
-
-      setPdfData(new Blob([response.data], { type: 'application/pdf' }));
-      // 実際にはサムネイルを生成するロジックが必要ですが、ダミーのサムネイルを設定
-      setThumbnail('04.png');
-    } catch (error) {
-      console.error("Error processing the PDF:", error);
     }
+    fetchFiles(); // ファイルを保存した後、ファイルリストを再度取得します。
   };
 
   return (
@@ -62,7 +49,17 @@ export default function Home() {
           <a href={pdfData ? URL.createObjectURL(pdfData) : '#'} download="edited.pdf">ダウンロード</a>
         </div>
       )}
+
+      {/* 一時ディレクトリのファイル一覧を表示する */}
+      <div>
+        <h2>Uploaded Files</h2>
+        <ul>
+          {fileList.map(file => (
+            <li key={file}>{file}</li>
+          ))}
+        </ul>
+      </div>
+
     </div>
   );
 }
-

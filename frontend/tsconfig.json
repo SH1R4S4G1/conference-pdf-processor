@@ -17,6 +17,8 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "types": ["electron"] ,
     "plugins": [
       {
         "name": "next"

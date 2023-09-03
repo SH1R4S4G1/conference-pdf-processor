@@ -25,6 +25,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // main.ts
 const electron_1 = require("electron");
+const electron_2 = require("electron");
+const os = __importStar(require("os"));
+const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let mainWindow;
 const createWindow = () => {
@@ -34,7 +37,7 @@ const createWindow = () => {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: true,
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.js')
         },
     });
     // 環境に応じてURLをロード
@@ -59,4 +62,28 @@ electron_1.app.on('activate', () => {
     if (mainWindow === null) {
         createWindow();
     }
+});
+electron_1.app.on('will-quit', () => {
+    const tempDir = electron_1.app.getPath('temp');
+    const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
+    for (const file of files) {
+        try {
+            fs.unlinkSync(path.join(tempDir, file));
+        }
+        catch (err) {
+            console.error("Failed to delete file:", file, err);
+        }
+    }
+});
+electron_2.ipcMain.handle('save-to-temp', async (event, fileData) => {
+    const tempDir = os.tmpdir();
+    const uniqueFilename = Date.now() + ".pdf"; // ユニークなファイル名を生成
+    const filePath = path.join(tempDir, uniqueFilename);
+    fs.writeFileSync(filePath, new Buffer(fileData));
+    return filePath;
+});
+electron_2.ipcMain.handle('get-temp-files', async () => {
+    const tempDir = electron_1.app.getPath('temp');
+    const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
+    return files;
 });

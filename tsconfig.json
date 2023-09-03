@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "target": "ES2018",
+      "module": "CommonJS",
+      "outDir": "./build_electron",
+      "rootDir": "./",
+      "strict": true,
+      "esModuleInterop": true
+    },
+    "include": ["**/*.ts"],
+    "exclude": ["node_modules"]
+  }
+  

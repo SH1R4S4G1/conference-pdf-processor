@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ipcRenderer } from 'electron';
+import * as os from 'os';
+import * as path from 'path';
 
 export default function Home() {
   const [pdfData, setPdfData] = useState<Blob | null>(null);
@@ -19,22 +21,45 @@ export default function Home() {
 
   const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+  
+    // ドロップされたファイルを取得
     const files = event.dataTransfer.files;
-    const uploadedFiles = [];
-
+  
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const fileBuffer = await file.arrayBuffer();
-      const filePath = await window.electron.invoke('save-to-temp', fileBuffer);
-      uploadedFiles.push({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        path: filePath
-      });
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      let convertedFilePath: string | null = null;
+  
+      if (file.type === 'application/pdf' || ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(fileExt || '')) {
+        // ファイルがWord, Excel, PowerPointの場合、変換後のPDFを取得
+        const fileBuffer = await file.arrayBuffer();
+        const tempDir = os.tmpdir();
+        const uniqueFilename = Date.now() + ".pdf";
+        const outputFilePath = path.join(tempDir, uniqueFilename);
+
+        console.log(fileExt, file.type, file.path, outputFilePath);
+        
+        if (['doc', 'docx'].includes(fileExt || '')) {
+          convertedFilePath = await window.electron.invoke('convert-word-to-pdf', file.path, outputFilePath);
+          console.log(convertedFilePath);
+        } else if (['xls', 'xlsx'].includes(fileExt || '')) {
+          convertedFilePath = await window.electron.invoke('convert-excel-to-pdf', file.path, outputFilePath);
+        } else if (['ppt', 'pptx'].includes(fileExt || '')) {
+          convertedFilePath = await window.electron.invoke('convert-ppt-to-pdf', file.path, outputFilePath);
+        } else if (file.type === 'application/pdf') {
+          // PDFファイルの場合、そのまま一時保存ディレクトリに保存
+          await window.electron.invoke('save-to-temp', new Uint8Array(fileBuffer));
+        }
+
+      } else {
+        alert(`${file.name} is not a supported file type.`);
+      }
     }
-    fetchFiles(); // ファイルを保存した後、ファイルリストを再度取得します。
+  
+    // ステートを更新して、フロントエンドにアップロードされたファイルの情報を表示
+    fetchFiles();
   };
+  
 
   return (
     <div>

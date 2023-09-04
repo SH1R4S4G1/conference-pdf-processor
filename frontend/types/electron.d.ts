@@ -4,7 +4,7 @@ declare interface Window {
       on: (channel: string, func: (event: any, ...args: any[]) => void) => void;
       once: (channel: string, func: (event: any, ...args: any[]) => void) => void;
       off: (channel: string, func: (event: any, ...args: any[]) => void) => void;
-      invoke: (channel: string, data?: any) => Promise<any>;
+      invoke: (channel: string, ...data: any[]) => Promise<any>;
     };
   }
   

@@ -1,6 +1,7 @@
 // main.ts
 import { app, BrowserWindow } from 'electron';
 import { ipcMain } from 'electron';
+const { exec } = require('child_process');
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -54,6 +55,7 @@ app.on('will-quit', () => {
   }
 });
 
+// ファイルを一時フォルダに保存
 ipcMain.handle('save-to-temp', async (event, fileData) => {
   const tempDir = os.tmpdir();
   const uniqueFilename = Date.now() + ".pdf";  // ユニークなファイル名を生成
@@ -64,8 +66,52 @@ ipcMain.handle('save-to-temp', async (event, fileData) => {
   return filePath;
 });
 
+// ファイル一覧を取得
 ipcMain.handle('get-temp-files', async () => {
   const tempDir = app.getPath('temp');
   const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
   return files;
 });
+
+// wordをpdfに変換
+ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
+  return new Promise((resolve, reject) => {
+    const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
+    exec(command, (error: Error | null) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(outputFilePath);
+      }
+    });
+  });
+});
+
+// Excelをpdfに変換
+ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) => {
+  return new Promise((resolve, reject) => {
+    const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
+    exec(command, (error: Error | null) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(outputFilePath);
+      }
+    });
+  });
+});
+
+// PowerPointをpdfに変換
+ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => {
+  return new Promise((resolve, reject) => {
+    const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.ExportAsFixedFormat('${outputFilePath}', 2); $presentation.Close(); $powerpoint.Quit()"`;
+    exec(command, (error: Error | null) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(outputFilePath);
+      }
+    });
+  });
+});
+

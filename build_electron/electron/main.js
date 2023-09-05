@@ -93,9 +93,11 @@ electron_2.ipcMain.handle('get-temp-files', async () => {
 // wordをpdfに変換
 electron_2.ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
     return new Promise((resolve, reject) => {
+        console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
         const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
         exec(command, (error) => {
             if (error) {
+                console.error("Word to PDF conversion error:", error);
                 reject(error);
             }
             else {
@@ -107,6 +109,7 @@ electron_2.ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputF
 // Excelをpdfに変換
 electron_2.ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) => {
     return new Promise((resolve, reject) => {
+        console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
         const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
         exec(command, (error) => {
             if (error) {
@@ -121,7 +124,9 @@ electron_2.ipcMain.handle('convert-excel-to-pdf', async (event, filePath, output
 // PowerPointをpdfに変換
 electron_2.ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => {
     return new Promise((resolve, reject) => {
-        const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.ExportAsFixedFormat('${outputFilePath}', 2); $presentation.Close(); $powerpoint.Quit()"`;
+        console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
+        const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.SaveAs('${outputFilePath}', 32); $presentation.Close(); $powerpoint.Quit()"`;
+        // const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('C:\\Users\\devuser\\Downloads\\test.pptx'); $presentation.SaveAs('C:\\Users\\devuser\\AppData\\Local\\Temp\\1693924685095.pdf', 32); $presentation.Close(); $powerpoint.Quit();"`;
         exec(command, (error) => {
             if (error) {
                 reject(error);

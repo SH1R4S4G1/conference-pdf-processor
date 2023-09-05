@@ -33,13 +33,16 @@ export default function Home() {
       if (file.type === 'application/pdf' || ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(fileExt || '')) {
         // ファイルがWord, Excel, PowerPointの場合、変換後のPDFを取得
         const fileBuffer = await file.arrayBuffer();
-        const tempDir = os.tmpdir();
+        // const tempDir = os.tmpdir();
+        const tempDir = 'C:\\Users\\devuser\\AppData\\Local\\Temp';
+        console.log("Temp Directory:", tempDir);
         const uniqueFilename = Date.now() + ".pdf";
         const outputFilePath = path.join(tempDir, uniqueFilename);
 
         console.log(fileExt, file.type, file.path, outputFilePath);
         
         if (['doc', 'docx'].includes(fileExt || '')) {
+          console.log(outputFilePath);
           convertedFilePath = await window.electron.invoke('convert-word-to-pdf', file.path, outputFilePath);
           console.log(convertedFilePath);
         } else if (['xls', 'xlsx'].includes(fileExt || '')) {

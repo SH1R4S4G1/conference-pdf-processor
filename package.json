@@ -7,7 +7,7 @@
     "dev:frontend": "cd frontend && npm run dev",
     "build:frontend": "cd frontend && npm run build",
     "start:frontend": "cd frontend && npm run start",
-    "start:electron": "electron ./build_electron/electron/main.js",
+    "start:electron": "tsc && electron ./build_electron/electron/main.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
@@ -32,6 +32,7 @@
   "dependencies": {
     "@next/font": "^13.4.19",
     "axios": "^1.5.0",
+    "pdf-lib": "^1.17.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },

@@ -1,7 +1,8 @@
 // main.ts
 import { app, BrowserWindow } from 'electron';
 import { ipcMain } from 'electron';
-const { exec } = require('child_process');
+import { exec } from 'child_process';
+import { PDFDocument } from 'pdf-lib';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -13,9 +14,10 @@ const createWindow = () => {
     width: 800,
     height: 600,
     webPreferences: {
+      // nodeIntegration: false, // これはセキュリティ上の理由で推奨されています
       nodeIntegration: true,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, '..\\..\\electron\\preload.js')
     },
   });
 
@@ -56,17 +58,24 @@ app.on('will-quit', () => {
 });
 
 // ファイルを一時フォルダに保存
-ipcMain.handle('save-to-temp', async (event, fileData) => {
-  const tempDir = os.tmpdir();
-  const uniqueFilename = Date.now() + ".pdf";  // ユニークなファイル名を生成
-  const filePath = path.join(tempDir, uniqueFilename);
-
-  fs.writeFileSync(filePath, new Buffer(fileData));
-
-  return filePath;
+ipcMain.handle('save-to-temp', async (event, fileData, outputFilePath) => {
+  fs.writeFileSync(outputFilePath, new Buffer(fileData));
+  return outputFilePath;
 });
 
+// ipcMain.handle('save-to-temp', async (event, fileData) => {
+
+//   const tempDir = os.tmpdir();
+//   const uniqueFilename = Date.now() + ".pdf";  // ユニークなファイル名を生成
+//   const filePath = path.join(tempDir, uniqueFilename);
+
+//   fs.writeFileSync(filePath, new Buffer(fileData));
+
+//   return filePath;
+// });
+
 // ファイル一覧を取得
+
 ipcMain.handle('get-temp-files', async () => {
   const tempDir = app.getPath('temp');
   const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
@@ -122,3 +131,15 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
   });
 });
 
+// PDFのページ数を取得
+ipcMain.handle('get-pdf-page-count', async (event, filePath) => {
+  try {
+    const pdfBytes = fs.readFileSync(filePath);
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const pageCount = pdfDoc.getPageCount();
+    return pageCount;
+  } catch (error) {
+    console.error("Error reading PDF:", error);
+    throw error;
+  }
+});

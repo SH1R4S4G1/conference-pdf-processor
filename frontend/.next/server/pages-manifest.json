@@ -1,9 +1,9 @@
 {
-  "/api/saveToTemp": "pages/api/saveToTemp.js",
-  "/": "pages/index.html",
-  "/api/process-pdf": "pages/api/process-pdf.js",
-  "/_error": "pages/_error.js",
   "/_app": "pages/_app.js",
+  "/": "pages/index.html",
+  "/api/saveToTemp": "pages/api/saveToTemp.js",
+  "/_error": "pages/_error.js",
+  "/api/process-pdf": "pages/api/process-pdf.js",
   "/_document": "pages/_document.js",
   "/404": "pages/404.html"
 }

@@ -75,11 +75,15 @@ ipcMain.handle('save-to-temp', async (event, fileData, outputFilePath) => {
 // });
 
 // ファイル一覧を取得
-
+// ipcMain.handle('get-temp-files', async () => {
+//   const tempDir = app.getPath('temp');
+//   const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
+//   return files;
+// });
 ipcMain.handle('get-temp-files', async () => {
   const tempDir = app.getPath('temp');
   const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
-  return files;
+  return files.map(file => path.join(tempDir, file));  // フルパスを返すように修正
 });
 
 // wordをpdfに変換
@@ -140,6 +144,25 @@ ipcMain.handle('get-pdf-page-count', async (event, filePath) => {
     return pageCount;
   } catch (error) {
     console.error("Error reading PDF:", error);
+    throw error;
+  }
+});
+
+// PDFに白紙のページを追加
+ipcMain.handle('add-blank-page', async (event, filePath) => {
+  try {
+    const pdfBytes = fs.readFileSync(filePath);
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    
+    // 新しい白紙のページを追加
+    pdfDoc.addPage([612, 792]); // A4のサイズ
+
+    const newPdfBytes = await pdfDoc.save();
+    fs.writeFileSync(filePath, newPdfBytes);
+
+    return true;
+  } catch (error) {
+    console.error("Error adding blank page:", error);
     throw error;
   }
 });

@@ -1,4 +1,6 @@
 // index.tsx
+// 処理の際には、フルパスを使用する。必要に応じて「path.basename()」を使用してファイル名のみを取得する。
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ipcRenderer } from 'electron';
@@ -48,9 +50,9 @@ export default function Home() {
         const fileBuffer = await file.arrayBuffer();
         // const tempDir = os.tmpdir(); // windowsなのにlinuxのtempDirが取得される
         const tempDir = 'C:\\Users\\devuser\\AppData\\Local\\Temp'; // TODO: 環境変数から取得するようにする
-        console.log("Temp Directory:", tempDir); 
+        console.log("Temp Directory:", tempDir);
         const uniqueFilename = Date.now() + ".pdf"; // 一時保存ディレクトリに保存するファイルの名前
-        const outputFilePath = path.join(tempDir, uniqueFilename); // 一時保存ディレクトリに保存するファイルのパス
+        const outputFilePath = path.join(tempDir, uniqueFilename).replace(/\//g, '\\'); // 一時保存ディレクトリに保存するファイルのパス
         const outputFileName = path.basename(outputFilePath);  // 一時保存ディレクトリに保存するファイルの名前
 
         console.log(fileExt, file.type, file.path, outputFilePath);
@@ -77,7 +79,7 @@ export default function Home() {
         console.log(pageCount);
         if (pageCount % 2 !== 0) {
           console.log("ページ数が奇数です。");
-          setOddPageFiles(prevFiles => [...prevFiles, outputFileName]); 
+          setOddPageFiles(prevFiles => [...prevFiles, outputFilePath]);
         }
 
       } else {
@@ -88,6 +90,24 @@ export default function Home() {
     // ステートを更新して、フロントエンドにアップロードされたファイルの情報を表示
     fetchFiles();
   };
+
+  // ページ数が奇数のPDFファイルに白紙を差し込む
+  const handleAddBlankPages = async () => {
+    // const tempDir = 'C:\\Users\\devuser\\AppData\\Local\\Temp'; // TODO: 環境変数から取得するようにする
+    console.log('handleAddBlankPages');
+    for (const filePath of oddPageFiles) {
+      try {
+        // await window.electron.invoke('add-blank-page', path.join(tempDir, filePath));
+        await window.electron.invoke('add-blank-page', filePath);
+      } catch (error) {
+        console.error(`Error adding blank page to ${filePath}:`, error);
+      }
+    }
+    console.log('白紙差し込み完了');
+    // ファイルリストを更新
+    fetchFiles();
+  };
+  
 
   return (
     <div>
@@ -107,20 +127,23 @@ export default function Home() {
       <div>
         <h2>Uploaded Files</h2>
         <ul>
-          {fileList.map(file => (
-            <li key={file}>
-              {file}
-              {oddPageFiles.includes(file) && (
-                <div>
-                  <input type="checkbox" id={`insert-blank-${file}`} />
-                  <label htmlFor={`insert-blank-${file}`}>白紙を差し込む</label>
-                </div>
-              )}
-            </li>
-          ))}
+          {fileList.map(file => {
+            console.log("Checking file:", file, oddPageFiles.includes(file));  // このログを追加
+            return (
+              <li key={file}>
+                {file}
+                {oddPageFiles.includes(file) && (
+                  <div>
+                      <input type="checkbox" id={`insert-blank-${path.basename(file)}`} /> 
+                      <label htmlFor={`insert-blank-${path.basename(file)}`}>白紙を差し込む</label>
+                      <button onClick={handleAddBlankPages}>白紙差し込みを実行</button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
-
-    </div>
+     </div>
   );
 }

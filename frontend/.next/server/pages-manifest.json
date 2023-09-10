@@ -1,7 +1,7 @@
 {
-  "/api/saveToTemp": "pages/api/saveToTemp.js",
-  "/": "pages/index.html",
   "/_app": "pages/_app.js",
+  "/": "pages/index.html",
+  "/api/saveToTemp": "pages/api/saveToTemp.js",
   "/_error": "pages/_error.js",
   "/api/process-pdf": "pages/api/process-pdf.js",
   "/_document": "pages/_document.js",

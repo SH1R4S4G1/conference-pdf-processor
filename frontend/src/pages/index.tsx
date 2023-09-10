@@ -17,6 +17,12 @@ export default function Home() {
   // ページ数が偶数のPDFファイルの一覧
   // const [evenPageFiles, setEvenPageFiles] = useState<string[]>([]);
 
+  // ページ数を付与するかどうかのフラグ
+  const [addPageNumbers, setAddPageNumbers] = useState(false);
+
+  // 白紙を差し込むファイルの一覧
+  const [filesToInsertBlank, setFilesToInsertBlank] = useState<string[]>([]);
+
   useEffect(() => {
     console.log('fileList has changed:', fileList);
   }, [fileList]);
@@ -93,12 +99,10 @@ export default function Home() {
 
   // ページ数が奇数のPDFファイルに白紙を差し込む
   const handleAddBlankPages = async () => {
-    // const tempDir = 'C:\\Users\\devuser\\AppData\\Local\\Temp'; // TODO: 環境変数から取得するようにする
-    console.log('handleAddBlankPages');
-    for (const filePath of oddPageFiles) {
+    for (const filePath of filesToInsertBlank) {
       try {
-        // await window.electron.invoke('add-blank-page', path.join(tempDir, filePath));
-        await window.electron.invoke('add-blank-page', filePath);
+        const newFilePath = await window.electron.invoke('add-blank-page', filePath);
+        setFileList(prevFiles => [...prevFiles, newFilePath]);
       } catch (error) {
         console.error(`Error adding blank page to ${filePath}:`, error);
       }
@@ -106,6 +110,29 @@ export default function Home() {
     console.log('白紙差し込み完了');
     // ファイルリストを更新
     fetchFiles();
+  };
+  
+  
+  const handleCombinePDFs = async () => {
+    console.log(fileList);  // ここで fileList の内容を確認
+    try {    
+      const tempFilePath = await window.electron.invoke('combine-pdfs', {
+        files: fileList,
+        addPageNumbers: addPageNumbers
+      });
+
+      await window.electron.invoke('open-file', tempFilePath);
+    } catch (error) {
+      console.error("Error combining PDFs:", error);
+    }
+  };
+
+  const handleInsertBlankCheckboxChange = (filePath: string, isChecked: boolean) => {
+    if (isChecked) {
+      setFilesToInsertBlank(prev => [...prev, filePath]);
+    } else {
+      setFilesToInsertBlank(prev => prev.filter(f => f !== filePath));
+    }
   };
   
 
@@ -134,7 +161,11 @@ export default function Home() {
                 {file}
                 {oddPageFiles.includes(file) && (
                   <div>
-                      <input type="checkbox" id={`insert-blank-${path.basename(file)}`} /> 
+                      <input
+                        type="checkbox"
+                        id={`insert-blank-${path.basename(file)}`}
+                        onChange={(e) => handleInsertBlankCheckboxChange(file, e.target.checked)}
+                      />
                       <label htmlFor={`insert-blank-${path.basename(file)}`}>白紙を差し込む</label>
                       <button onClick={handleAddBlankPages}>白紙差し込みを実行</button>
                   </div>
@@ -143,7 +174,23 @@ export default function Home() {
             );
           })}
         </ul>
+        <div className="mt-4">
+          <label>
+            <input
+              type="checkbox"
+              checked={addPageNumbers}
+              onChange={e => setAddPageNumbers(e.target.checked)}
+            />
+            ページ数を付与する
+          </label>
+        </div>
+
+        <div className="mt-4">
+          <button onClick={handleCombinePDFs}>ファイルを統合する</button>
+        </div>
+
       </div>
      </div>
   );
 }
+

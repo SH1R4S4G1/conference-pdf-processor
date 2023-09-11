@@ -56,12 +56,17 @@ app.on('will-quit', () => {
   }
 });
 
+
+// OSの一時フォルダを取得
+ipcMain.handle('get-os-tmpdir', () => {
+  return os.tmpdir();
+});
+
 // ファイルを一時フォルダに保存
 ipcMain.handle('save-to-temp', async (event, fileData, outputFilePath) => {
   fs.writeFileSync(outputFilePath, new Buffer(fileData));
   return outputFilePath;
 });
-
 
 // ファイル一覧を取得
 ipcMain.handle('get-temp-files', async () => {
@@ -152,63 +157,6 @@ ipcMain.handle('add-blank-page', async (event, filePath) => {
 });
 
 // PDFを結合する
-// ipcMain.handle('combine-pdfs', async (event, filePaths: string[]) => {
-//   console.log("Received data in 'combine-pdfs':", filePaths);
-//   console.log("Type of received data:", typeof filePaths);
-  
-//   try {
-//       const mergedPdfDoc = await PDFDocument.create();
-//       for (const files of filePaths) {
-//           const pdfBytes = fs.readFileSync(files);
-//           const pdfDoc = await PDFDocument.load(pdfBytes);
-//           const pages = await mergedPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
-//           for (const page of pages) {
-//               mergedPdfDoc.addPage(page);
-//           }
-//       }
-//       const mergedPdfBytes = await mergedPdfDoc.save();
-//       const tempDir = app.getPath('temp');
-//       const outputPath = path.join(tempDir, `merged-${Date.now()}.pdf`);
-//       fs.writeFileSync(outputPath, mergedPdfBytes);
-//       return outputPath;
-//   } catch (error) {
-//       console.error("Error combining PDFs:", error);
-//       throw error;
-//   }
-// });
-// ipcMain.handle('combine-pdfs', async (event, { files }) => {
-//   console.log("Received files for combining:", files);
-//   try {
-//       const mergedPdfDoc = await PDFDocument.create();
-
-//       for (const filePath of files) {
-//           console.log("Reading file:", filePath);
-
-//           // Read the file and check if it's valid
-//           const pdfBytes = fs.readFileSync(filePath);
-//           const testPdfDoc = await PDFDocument.load(pdfBytes);
-//           console.log(`File ${filePath} has ${testPdfDoc.getPageCount()} pages.`);
-
-//           const pdfDoc = await PDFDocument.load(pdfBytes);
-//           const pages = await mergedPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
-//           for (const page of pages) {
-//               mergedPdfDoc.addPage(page);
-//           }
-//       }
-
-//       // Check the combined PDF before saving
-//       console.log(`Combined PDF has ${mergedPdfDoc.getPageCount()} pages.`);
-
-//       const mergedPdfBytes = await mergedPdfDoc.save();
-//       const tempDir = app.getPath('temp');
-//       const outputPath = path.join(tempDir, `merged-${Date.now()}.pdf`);
-//       fs.writeFileSync(outputPath, mergedPdfBytes);
-//       return outputPath;
-//   } catch (error) {
-//       console.error("Error combining PDFs:", error);
-//       throw error;
-//   }
-// });
 ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNumbers: boolean }) => {
   console.log("Received files for combining:", data.files);
   const mergedPdfDoc = await PDFDocument.create();

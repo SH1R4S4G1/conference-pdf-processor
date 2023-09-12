@@ -7,6 +7,12 @@ import { ipcRenderer } from 'electron';
 import * as os from 'os';
 import * as path from 'path';
 
+type Pattern = {
+  id: number;
+  addPageNumbers: boolean;
+  oddPageFiles: string[];
+};
+
 export default function Home() {
   const [pdfData, setPdfData] = useState<Blob | null>(null);
   const [thumbnail, setThumbnail] = useState<string | null>(null);  
@@ -20,6 +26,12 @@ export default function Home() {
 
   // 白紙を差し込むファイルの一覧
   const [filesToInsertBlank, setFilesToInsertBlank] = useState<string[]>([]);
+
+  // 処理を実行するためのファイルの一覧（FileListのコピー）
+  const [targetFileList, setTargetFileList] = useState<Array<{ id: number, path: string }>>([]);
+
+  // 処理のパターンの一覧
+  const [patterns, setPatterns] = useState<Pattern[]>([]);
 
   useEffect(() => {
     console.log('fileList has changed:', fileList);
@@ -38,6 +50,12 @@ export default function Home() {
     fetchFiles();
   }, []); // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
 
+  useEffect(() => {
+    if (fileList.length > 0 && patterns.length === 0) {
+      addPattern();  // 処理前のファイルリストが表示されたとき、最初のパターンを自動で作成する
+    }
+  }, [fileList]);
+  
   const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
   
@@ -131,7 +149,41 @@ export default function Home() {
       setFilesToInsertBlank(prev => prev.filter(f => f !== filePath));
     }
   };
+
+  const handleCombinePDFsForAllPatterns = async () => {
+    for (const pattern of patterns) {
+      const combinedFiles = await combineFilesForPattern(pattern);
+      const tempFilePath = await window.electron.invoke('combine-pdfs', {
+        files: combinedFiles,
+        addPageNumbers: pattern.addPageNumbers
+      });
+      await window.electron.invoke('open-file', tempFilePath); // 合成したPDFを開く
+    }
+  };
   
+  const combineFilesForPattern = async (pattern: Pattern) => {
+    let combinedFiles: string[] = [];
+  
+    for (const file of fileList) {
+      if (pattern.oddPageFiles.includes(file)) {
+        const newFilePath = await window.electron.invoke('add-blank-page', file);
+        combinedFiles.push(newFilePath);  // 白紙を追加した新しいファイルを結合リストに追加
+      } else {
+        combinedFiles.push(file);  // 通常のファイルを結合リストに追加
+      }
+    }
+    return combinedFiles;
+  };
+  
+    
+  const addPattern = () => {
+    const newPattern: Pattern = {
+      id: Date.now(),
+      addPageNumbers: false,
+      oddPageFiles: [],
+    };
+    setPatterns((prevPatterns) => [...prevPatterns, newPattern]);
+  };
 
   return (
     <div>
@@ -139,55 +191,76 @@ export default function Home() {
         PDFをここにドロップ
       </div>
 
-      {thumbnail && (
-        <div>
-          <img src={thumbnail} alt="サムネイル" />
-          {/* ダウンロードリンクの修正 */}
-          <a href={pdfData ? URL.createObjectURL(pdfData) : '#'} download="edited.pdf">ダウンロード</a>
-        </div>
-      )}
-
-      {/* 一時ディレクトリのファイル一覧を表示する */}
       <div>
-        <h2>Uploaded Files</h2>
-        <ul>
-          {fileList.map(file => {
-            console.log("Checking file:", file, oddPageFiles.includes(file));  // このログを追加
-            return (
-              <li key={file}>
-                {file}
+    <h2>処理前のファイルリスト</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ファイル名</th>
+          {patterns.map(pattern => (
+            <th key={pattern.id}>
+              パターン {pattern.id} 
+              <br />
+              <label>
+                <input
+                  type="checkbox"
+                  checked={pattern.addPageNumbers}
+                  onChange={e => {
+                    const updatedPatterns = patterns.map(p => {
+                      if (p.id === pattern.id) {
+                        return { ...p, addPageNumbers: e.target.checked };
+                      }
+                      return p;
+                    });
+                    setPatterns(updatedPatterns);
+                  }}
+                />
+                ページ数を付与
+              </label>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {fileList.map(file => (
+          <tr key={file}>
+            <td>{path.basename(file)}</td>
+            {patterns.map(pattern => (
+              <td key={pattern.id}>
                 {oddPageFiles.includes(file) && (
-                  <div>
-                      <input
-                        type="checkbox"
-                        id={`insert-blank-${path.basename(file)}`}
-                        onChange={(e) => handleInsertBlankCheckboxChange(file, e.target.checked)}
-                      />
-                      <label htmlFor={`insert-blank-${path.basename(file)}`}>白紙を差し込む</label>
-                      <button onClick={handleAddBlankPages}>白紙差し込みを実行</button>
-                  </div>
+                  <input
+                    type="checkbox"
+                    checked={pattern.oddPageFiles.includes(file)}
+                    onChange={e => {
+                      const updatedPatterns = patterns.map(p => {
+                        if (p.id === pattern.id) {
+                          if (e.target.checked) {
+                            return { ...p, oddPageFiles: [...p.oddPageFiles, file] };
+                          } else {
+                            return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file) };
+                          }
+                        }
+                        return p;
+                      });
+                      setPatterns(updatedPatterns);
+                    }}
+                  />
                 )}
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-4">
-          <label>
-            <input
-              type="checkbox"
-              checked={addPageNumbers}
-              onChange={e => setAddPageNumbers(e.target.checked)}
-            />
-            ページ数を付与する
-          </label>
-        </div>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
 
-        <div className="mt-4">
-          <button onClick={handleCombinePDFs}>ファイルを統合する</button>
-        </div>
+    {fileList.length > 0 && (
+      <button onClick={addPattern}>＋</button>
+    )}
 
-      </div>
-     </div>
+    {patterns.length > 0 && (
+      <button onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
+    )}
+  </div>
+  </div>
   );
 }
-

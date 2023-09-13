@@ -1,9 +1,0 @@
-{
-  "/api/saveToTemp": "pages/api/saveToTemp.js",
-  "/": "pages/index.html",
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/api/process-pdf": "pages/api/process-pdf.js",
-  "/404": "pages/404.html"
-}

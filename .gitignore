@@ -46,4 +46,6 @@ next-env.d.ts
 *.deb
 *.asar
 
+# Frontend
 /frontend/.next/
+/frontend/node_modules

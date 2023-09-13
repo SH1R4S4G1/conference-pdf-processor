@@ -39,6 +39,7 @@ next-env.d.ts
 /dist/
 /electron-packaged/
 /release/
+/build_electron/
 *.app
 *.exe
 *.dmg

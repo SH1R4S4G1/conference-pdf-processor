@@ -185,82 +185,168 @@ export default function Home() {
     setPatterns((prevPatterns) => [...prevPatterns, newPattern]);
   };
 
+  // return (
+  //   <div>
+  //     <div onDrop={onDrop} onDragOver={(e) => e.preventDefault()} style={{ border: '1px dashed', height: '200px' }}>
+  //       PDFをここにドロップ
+  //     </div>
+
+  //     <div>
+  //   <h2>処理前のファイルリスト</h2>
+  //   <table>
+  //     <thead>
+  //       <tr>
+  //         <th>ファイル名</th>
+  //         {patterns.map(pattern => (
+  //           <th key={pattern.id}>
+  //             パターン {pattern.id} 
+  //             <br />
+  //             <label>
+  //               <input
+  //                 type="checkbox"
+  //                 checked={pattern.addPageNumbers}
+  //                 onChange={e => {
+  //                   const updatedPatterns = patterns.map(p => {
+  //                     if (p.id === pattern.id) {
+  //                       return { ...p, addPageNumbers: e.target.checked };
+  //                     }
+  //                     return p;
+  //                   });
+  //                   setPatterns(updatedPatterns);
+  //                 }}
+  //               />
+  //               ページ数を付与
+  //             </label>
+  //           </th>
+  //         ))}
+  //       </tr>
+  //     </thead>
+  //     <tbody>
+  //       {fileList.map(file => (
+  //         <tr key={file}>
+  //           <td>{path.basename(file)}</td>
+  //           {patterns.map(pattern => (
+  //             <td key={pattern.id}>
+  //               {oddPageFiles.includes(file) && (
+  //                 <input
+  //                   type="checkbox"
+  //                   checked={pattern.oddPageFiles.includes(file)}
+  //                   onChange={e => {
+  //                     const updatedPatterns = patterns.map(p => {
+  //                       if (p.id === pattern.id) {
+  //                         if (e.target.checked) {
+  //                           return { ...p, oddPageFiles: [...p.oddPageFiles, file] };
+  //                         } else {
+  //                           return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file) };
+  //                         }
+  //                       }
+  //                       return p;
+  //                     });
+  //                     setPatterns(updatedPatterns);
+  //                   }}
+  //                 />
+  //               )}
+  //             </td>
+  //           ))}
+  //         </tr>
+  //       ))}
+  //     </tbody>
+  //   </table>
+
+  //   {fileList.length > 0 && (
+  //     <button onClick={addPattern}>＋</button>
+  //   )}
+
+  //   {patterns.length > 0 && (
+  //     <button onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
+  //   )}
+  // </div>
+  // </div>
+  // );
+
   return (
-    <div>
-      <div onDrop={onDrop} onDragOver={(e) => e.preventDefault()} style={{ border: '1px dashed', height: '200px' }}>
+    <div className="p-10">
+      <div 
+        className="border-dashed border-2 h-60 flex justify-center items-center transition-colors hover:bg-gray-100 cursor-pointer" 
+        onDrop={onDrop} 
+        onDragOver={(e) => e.preventDefault()}
+      >
         PDFをここにドロップ
       </div>
-
-      <div>
-    <h2>処理前のファイルリスト</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>ファイル名</th>
-          {patterns.map(pattern => (
-            <th key={pattern.id}>
-              パターン {pattern.id} 
-              <br />
-              <label>
-                <input
-                  type="checkbox"
-                  checked={pattern.addPageNumbers}
-                  onChange={e => {
-                    const updatedPatterns = patterns.map(p => {
-                      if (p.id === pattern.id) {
-                        return { ...p, addPageNumbers: e.target.checked };
-                      }
-                      return p;
-                    });
-                    setPatterns(updatedPatterns);
-                  }}
-                />
-                ページ数を付与
-              </label>
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {fileList.map(file => (
-          <tr key={file}>
-            <td>{path.basename(file)}</td>
-            {patterns.map(pattern => (
-              <td key={pattern.id}>
-                {oddPageFiles.includes(file) && (
-                  <input
-                    type="checkbox"
-                    checked={pattern.oddPageFiles.includes(file)}
-                    onChange={e => {
-                      const updatedPatterns = patterns.map(p => {
-                        if (p.id === pattern.id) {
-                          if (e.target.checked) {
-                            return { ...p, oddPageFiles: [...p.oddPageFiles, file] };
-                          } else {
-                            return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file) };
+  
+      <div className="mt-10">
+        <h2 className="text-2xl font-semibold mb-5">処理前のファイルリスト</h2>
+        <table className="w-full border rounded-lg">
+          <thead>
+            <tr className="text-left">
+              <th className="px-4 py-2 w-1/3 border">ファイル名</th>
+              {patterns.map((pattern, index) => (
+                <th key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+                  パターン {pattern.id}
+                  <br />
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="cursor-pointer"
+                      checked={pattern.addPageNumbers}
+                      onChange={e => {
+                        const updatedPatterns = patterns.map(p => {
+                          if (p.id === pattern.id) {
+                            return { ...p, addPageNumbers: e.target.checked };
                           }
-                        }
-                        return p;
-                      });
-                      setPatterns(updatedPatterns);
-                    }}
-                  />
-                )}
-              </td>
+                          return p;
+                        });
+                        setPatterns(updatedPatterns);
+                      }}
+                    />
+                    <span>ページ数を付与</span>
+                  </label>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {fileList.map(file => (
+              <tr key={file}>
+                <td className="px-4 py-2 border">{path.basename(file)}</td>
+                {patterns.map((pattern, index) => (
+                  <td key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+                    {oddPageFiles.includes(file) && (
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer"
+                        checked={pattern.oddPageFiles.includes(file)}
+                        onChange={e => {
+                          const updatedPatterns = patterns.map(p => {
+                            if (p.id === pattern.id) {
+                              if (e.target.checked) {
+                                return { ...p, oddPageFiles: [...p.oddPageFiles, file] };
+                              } else {
+                                return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file) };
+                              }
+                            }
+                            return p;
+                          });
+                          setPatterns(updatedPatterns);
+                        }}
+                      />
+                    )}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-
-    {fileList.length > 0 && (
-      <button onClick={addPattern}>＋</button>
-    )}
-
-    {patterns.length > 0 && (
-      <button onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
-    )}
-  </div>
-  </div>
+          </tbody>
+        </table>
+  
+        {fileList.length > 0 && (
+          <button className="mt-5 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={addPattern}>＋</button>
+        )}
+  
+        {patterns.length > 0 && (
+          <button className="mt-5 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 ml-4" onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
+        )}
+      </div>
+    </div>
   );
+  
 }

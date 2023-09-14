@@ -64,7 +64,7 @@ ipcMain.handle('get-os-tmpdir', () => {
 
 // ファイルを一時フォルダに保存
 ipcMain.handle('save-to-temp', async (event, fileData, outputFilePath) => {
-  fs.writeFileSync(outputFilePath, new Buffer(fileData));
+  fs.writeFileSync(outputFilePath, Buffer.from(fileData));
   return outputFilePath;
 });
 

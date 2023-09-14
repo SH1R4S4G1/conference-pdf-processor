@@ -13,6 +13,11 @@ type Pattern = {
   oddPageFiles: string[];
 };
 
+type UploadedFile = {
+  originalName: string;
+  tempPath: string;
+};
+
 export default function Home() {
   const [pdfData, setPdfData] = useState<Blob | null>(null);
   const [thumbnail, setThumbnail] = useState<string | null>(null);  
@@ -32,6 +37,9 @@ export default function Home() {
 
   // 処理のパターンの一覧
   const [patterns, setPatterns] = useState<Pattern[]>([]);
+
+  // アップロードされた一時保存ディレクトリとオリジナルファイルの名前の対応の保持
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);  
 
   useEffect(() => {
     console.log('fileList has changed:', fileList);
@@ -94,6 +102,9 @@ export default function Home() {
           // PDFファイルの場合、そのまま一時保存ディレクトリに保存
           await window.electron.invoke('save-to-temp', new Uint8Array(fileBuffer), outputFilePath);
         }
+
+        // オリジナルのファイル名を保存
+        setUploadedFiles(prev => [...prev, { originalName: file.name, tempPath: outputFilePath }]);
 
         // 処理済みPDFからページ数を取得
         const pageCount = await window.electron.invoke('get-pdf-page-count', outputFilePath);
@@ -306,23 +317,23 @@ export default function Home() {
             </tr>
           </thead>
           <tbody>
-            {fileList.map(file => (
-              <tr key={file}>
-                <td className="px-4 py-2 border">{path.basename(file)}</td>
+            {uploadedFiles.map(file => (
+              <tr key={file.tempPath}>
+                <td className="px-4 py-2 border">{file.originalName}</td>
                 {patterns.map((pattern, index) => (
                   <td key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
-                    {oddPageFiles.includes(file) && (
+                    {oddPageFiles.includes(file.tempPath) && (
                       <input
                         type="checkbox"
                         className="cursor-pointer"
-                        checked={pattern.oddPageFiles.includes(file)}
+                        checked={pattern.oddPageFiles.includes(file.tempPath)}
                         onChange={e => {
                           const updatedPatterns = patterns.map(p => {
                             if (p.id === pattern.id) {
                               if (e.target.checked) {
-                                return { ...p, oddPageFiles: [...p.oddPageFiles, file] };
+                                return { ...p, oddPageFiles: [...p.oddPageFiles, file.tempPath] };
                               } else {
-                                return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file) };
+                                return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file.tempPath) };
                               }
                             }
                             return p;

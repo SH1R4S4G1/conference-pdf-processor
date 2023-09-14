@@ -2,5 +2,4 @@
 module.exports = {
   // Electron向けの設定
   distDir: '.next',
-  swcMinify: false, // <- trueだと効かない
 };

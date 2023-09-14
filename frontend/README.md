@@ -1,34 +1,77 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+# 会議資料作成支援アプリ
 
-First, run the development server:
+このアプリケーションは、Typescript + Electron + Nextjs + tailwindCSSを使用して構築された、会議資料作成を支援するビジネスアプリケーションです。
+
+## 1. セットアップ方法
+
+### 必要条件
+- Node.js (推奨バージョン: v14以上)
+- npm or yarn
+
+### 手順
+
+1. リポジトリをクローンまたはダウンロードします。
+   
+   ```bash
+   git clone [リポジトリのURL]
+   ```
+
+2. プロジェクトのルートディレクトリに移動します。
+   
+   ```bash
+   cd conference-pdf-processor-main
+   ```
+
+3. Electron向けとfrontend向けの両方の依存関係をインストールします。
+   
+   ```bash
+   npm run init:app
+   ```
+
+## 2. 開発の流れ
+
+1. Next.jsの開発サーバを起動します。
+   
+   ```bash
+   npm run dev:frontend
+   ```
+
+2. Electronアプリを起動します。
+   
+   ```bash
+   npm run start:electron
+   ```
+
+## 3. ビルドとデプロイ
+
+### Frontendのビルド
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+npm run build:frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Electronのパッケージング
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. アプリケーションをディレクトリとしてパックする場合：
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+   ```bash
+   npm run pack
+   ```
 
-## Learn More
+2. アプリケーションをビルドして配布形式で出力する場合：
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm run dist
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 4. 依存関係
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+このプロジェクトは以下の主要な技術スタックに依存しています：
 
-## Deploy on Vercel
+- TypeScript
+- Electron
+- Next.js
+- tailwindCSS
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+具体的な依存関係のバージョンは`package.json`を参照してください。

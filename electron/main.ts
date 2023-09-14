@@ -13,8 +13,7 @@ const createWindow = () => {
     width: 800,
     height: 600,
     webPreferences: {
-      // nodeIntegration: false, // これはセキュリティ上の理由で推奨されています
-      nodeIntegration: true,
+      nodeIntegration: false, // これはセキュリティ上の理由で推奨されています
       contextIsolation: true,
       preload: path.join(__dirname, '..\\..\\electron\\preload.js')
     },
@@ -24,9 +23,10 @@ const createWindow = () => {
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:3000');
   } else {
-    mainWindow.loadURL('http://localhost:3000');
-    // mainWindow.loadFile(path.join(__dirname, '../../frontend/.next/server/pages/index.html'));
+    //静的エクスポートされたファイルをロード
+    mainWindow.loadFile(path.join(__dirname, '..\\..\\frontend\\out\\index.html'));
   }
+
 
   mainWindow.on('closed', () => {
     mainWindow = null;

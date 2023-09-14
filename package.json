@@ -7,7 +7,7 @@
     "init:app": "npm run init:electron && npm run init:frontend",
     "init:frontend": "cd frontend && npm install",
     "dev:frontend": "cd frontend && npm run dev",
-    "build:frontend": "cd frontend && npm run build",
+    "build:frontend": "cd frontend && npm run build && npm run export",
     "start:frontend": "cd frontend && npm run start",
     "init:electron": "npm install",
     "start:electron": "tsc && electron ./build_electron/electron/main.js",
@@ -16,6 +16,10 @@
   },
   "build": {
     "appId": "com.yourcompany.yourAppId",
+    "files": [
+      "electron/**/*",
+      "frontend/out/**/*"
+    ],
     "win": {
       "target": "nsis"
     },

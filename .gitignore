@@ -50,4 +50,5 @@ next-env.d.ts
 
 # Frontend
 /frontend/.next/
+/frontend/out/
 /frontend/node_modules

@@ -45,7 +45,7 @@
 
 ## 3. ビルドとデプロイ
 
-### Frontendのビルド
+### Frontendのビルド及び静的エクスポート
 
 ```bash
 npm run build:frontend

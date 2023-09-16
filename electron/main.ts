@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 let mainWindow: Electron.BrowserWindow | null;
+let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -27,6 +28,9 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, '..\\..\\frontend\\out\\index.html'));
   }
 
+  if (!fs.existsSync(appTempDir)) {
+    fs.mkdirSync(appTempDir);
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -45,7 +49,7 @@ app.on('activate', () => {
   }
 });
 app.on('will-quit', () => {
-  const tempDir = app.getPath('temp');
+  const tempDir = appTempDir;
   const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
   for (const file of files) {
     try {
@@ -59,7 +63,7 @@ app.on('will-quit', () => {
 
 // OSの一時フォルダを取得
 ipcMain.handle('get-os-tmpdir', () => {
-  return os.tmpdir();
+  return appTempDir;
 });
 
 // ファイルを一時フォルダに保存
@@ -70,7 +74,7 @@ ipcMain.handle('save-to-temp', async (event, fileData, outputFilePath) => {
 
 // ファイル一覧を取得
 ipcMain.handle('get-temp-files', async () => {
-  const tempDir = app.getPath('temp');
+  const tempDir = appTempDir;
   const files = fs.readdirSync(tempDir).filter(file => path.extname(file) === '.pdf');
   return files.map(file => path.join(tempDir, file));  // フルパスを返すように修正
 });
@@ -193,7 +197,7 @@ ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNum
   console.log(`Combined PDF has ${mergedPdfDoc.getPageCount()} pages.`);
 
   const mergedPdfBytes = await mergedPdfDoc.save();
-  const tempDir = app.getPath('temp');
+  const tempDir = appTempDir;
   const outputPath = path.join(tempDir, `merged-${Date.now()}.pdf`);
   fs.writeFileSync(outputPath, mergedPdfBytes);
 
@@ -220,7 +224,7 @@ ipcMain.handle('add-page-numbers', async (event, filePath: string) => {
           });
       }
       const modifiedPdfBytes = await pdfDoc.save();
-      const tempDir = app.getPath('temp');
+      const tempDir = appTempDir;
       const outputPath = path.join(tempDir, `numbered-${Date.now()}.pdf`);
       fs.writeFileSync(outputPath, modifiedPdfBytes);
       return outputPath;

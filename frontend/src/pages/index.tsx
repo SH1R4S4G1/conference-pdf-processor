@@ -2,6 +2,7 @@
 // 処理の際には、フルパスを使用する。必要に応じて「path.basename()」を使用してファイル名のみを取得する。
 
 import React, { useState, useEffect } from 'react';
+import FileRowWithControls from '../components/FileRowWithControls';
 import axios from 'axios';
 import { ipcRenderer } from 'electron';
 import * as os from 'os';
@@ -50,12 +51,13 @@ export default function Home() {
   }, [oddPageFiles]);  
 
   const fetchFiles = async () => {
+    // 一時保存ディレクトリからファイルの一覧を取得。全てのファイルを取得するので使用機会はない。
     const files = await window.electron.invoke('get-temp-files');
     setFileList(files);
   };
 
   useEffect(() => {
-    fetchFiles();
+    // fetchFiles();
   }, []); // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
 
   useEffect(() => {
@@ -63,17 +65,36 @@ export default function Home() {
       addPattern();  // 処理前のファイルリストが表示されたとき、最初のパターンを自動で作成する
     }
   }, [fileList]);
+ 
+  useEffect(() => {
+    const newFileList = uploadedFiles.map(f => f.tempPath);
+    setFileList(newFileList);
+    
+    const newOddPageFiles = newFileList.filter(file => oddPageFiles.includes(file));
+    setOddPageFiles(newOddPageFiles);
   
+    const newPatterns = patterns.map(pattern => {
+      return {
+        ...pattern,
+        oddPageFiles: pattern.oddPageFiles.filter(file => newFileList.includes(file))
+      };
+    });
+    setPatterns(newPatterns);
+
+    console.log('uploadedFiles has changed:',"uploadedFiles :", uploadedFiles,"newFileList :", newFileList, "newOddPageFiles :", newOddPageFiles,"newPatterns :", newPatterns);
+
+  }, [uploadedFiles]);  
+
   const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
   
     // ドロップされたファイルを取得
     const files = event.dataTransfer.files;
+    console.log("投入されたファイル", files);
   
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileExt = file.name.split('.').pop()?.toLowerCase();
-      // let convertedFilePath: string | null = null;
   
       if (file.type === 'application/pdf' || ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(fileExt || '')) {
         // ファイルがWord, Excel, PowerPointの場合、変換後のPDFを取得
@@ -86,7 +107,6 @@ export default function Home() {
 
         const uniqueFilename = Date.now() + ".pdf"; // 一時保存ディレクトリに保存するファイルの名前
         const outputFilePath = path.join(tempDir, uniqueFilename).replace(/\//g, '\\'); // 一時保存ディレクトリに保存するファイルのパス
-        const outputFileName = path.basename(outputFilePath);  // 一時保存ディレクトリに保存するファイルの名前
 
         console.log(fileExt, file.type, file.path, outputFilePath);
         
@@ -111,16 +131,19 @@ export default function Home() {
         console.log(pageCount);
         if (pageCount % 2 !== 0) {
           console.log("ページ数が奇数です。");
+          console.log("oddPageFiles更新前");
           setOddPageFiles(prevFiles => [...prevFiles, outputFilePath]);
+          console.log("oddPageFiles更新後");
         }
-
       } else {
         alert(`${file.name} is not a supported file type.`);
       }
       
     }
-    // ステートを更新して、フロントエンドにアップロードされたファイルの情報を表示
-    fetchFiles();
+    // console.log("fetchFiles()前");
+    // // ステートを更新して、フロントエンドにアップロードされたファイルの情報を表示
+    // fetchFiles();
+    // console.log("fetchFiles()後");
   };
 
   // ページ数が奇数のPDFファイルに白紙を差し込む
@@ -135,7 +158,7 @@ export default function Home() {
     }
     console.log('白紙差し込み完了');
     // ファイルリストを更新
-    fetchFiles();
+    // fetchFiles();
   };
   
   
@@ -196,84 +219,34 @@ export default function Home() {
     setPatterns((prevPatterns) => [...prevPatterns, newPattern]);
   };
 
-  // return (
-  //   <div>
-  //     <div onDrop={onDrop} onDragOver={(e) => e.preventDefault()} style={{ border: '1px dashed', height: '200px' }}>
-  //       PDFをここにドロップ
-  //     </div>
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(prevFiles => {
+        const newFiles = [...prevFiles];
+        newFiles.splice(index, 1);
+        return newFiles;
+    });
+    console.log('uploadedFiles has removed:', uploadedFiles);
+};
 
-  //     <div>
-  //   <h2>処理前のファイルリスト</h2>
-  //   <table>
-  //     <thead>
-  //       <tr>
-  //         <th>ファイル名</th>
-  //         {patterns.map(pattern => (
-  //           <th key={pattern.id}>
-  //             パターン {pattern.id} 
-  //             <br />
-  //             <label>
-  //               <input
-  //                 type="checkbox"
-  //                 checked={pattern.addPageNumbers}
-  //                 onChange={e => {
-  //                   const updatedPatterns = patterns.map(p => {
-  //                     if (p.id === pattern.id) {
-  //                       return { ...p, addPageNumbers: e.target.checked };
-  //                     }
-  //                     return p;
-  //                   });
-  //                   setPatterns(updatedPatterns);
-  //                 }}
-  //               />
-  //               ページ数を付与
-  //             </label>
-  //           </th>
-  //         ))}
-  //       </tr>
-  //     </thead>
-  //     <tbody>
-  //       {fileList.map(file => (
-  //         <tr key={file}>
-  //           <td>{path.basename(file)}</td>
-  //           {patterns.map(pattern => (
-  //             <td key={pattern.id}>
-  //               {oddPageFiles.includes(file) && (
-  //                 <input
-  //                   type="checkbox"
-  //                   checked={pattern.oddPageFiles.includes(file)}
-  //                   onChange={e => {
-  //                     const updatedPatterns = patterns.map(p => {
-  //                       if (p.id === pattern.id) {
-  //                         if (e.target.checked) {
-  //                           return { ...p, oddPageFiles: [...p.oddPageFiles, file] };
-  //                         } else {
-  //                           return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file) };
-  //                         }
-  //                       }
-  //                       return p;
-  //                     });
-  //                     setPatterns(updatedPatterns);
-  //                   }}
-  //                 />
-  //               )}
-  //             </td>
-  //           ))}
-  //         </tr>
-  //       ))}
-  //     </tbody>
-  //   </table>
-
-  //   {fileList.length > 0 && (
-  //     <button onClick={addPattern}>＋</button>
-  //   )}
-
-  //   {patterns.length > 0 && (
-  //     <button onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
-  //   )}
-  // </div>
-  // </div>
-  // );
+  
+  const handleMoveFileUp = (index: number) => {
+    if (index === 0) return;
+    const newFiles = [...uploadedFiles];
+    const temp = newFiles[index];
+    newFiles[index] = newFiles[index - 1];
+    newFiles[index - 1] = temp;
+    setUploadedFiles(newFiles);
+  };
+  
+  const handleMoveFileDown = (index: number) => {
+    if (index === uploadedFiles.length - 1) return;
+    const newFiles = [...uploadedFiles];
+    const temp = newFiles[index];
+    newFiles[index] = newFiles[index + 1];
+    newFiles[index + 1] = temp;
+    setUploadedFiles(newFiles);
+  };
+  
 
   return (
     <div className="p-10">
@@ -317,9 +290,19 @@ export default function Home() {
             </tr>
           </thead>
           <tbody>
-            {uploadedFiles.map(file => (
+            {uploadedFiles.map((file, index) => (
               <tr key={file.tempPath}>
-                <td className="px-4 py-2 border">{file.originalName}</td>
+                <td className="px-4 py-2 border flex items-center">
+                  {file.originalName}
+                  <FileRowWithControls
+                    fileName={file.originalName}
+                    isFirst={index === 0}
+                    isLast={index === uploadedFiles.length - 1}
+                    onMoveUp={() => handleMoveFileUp(index)}
+                    onMoveDown={() => handleMoveFileDown(index)}
+                    onRemove={() => handleRemoveFile(index)}
+                  />
+                </td>
                 {patterns.map((pattern, index) => (
                   <td key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
                     {oddPageFiles.includes(file.tempPath) && (
@@ -349,15 +332,14 @@ export default function Home() {
           </tbody>
         </table>
   
-        {fileList.length > 0 && (
+        {uploadedFiles.length > 0 && (
           <button className="mt-5 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={addPattern}>＋</button>
         )}
   
-        {patterns.length > 0 && (
+        {uploadedFiles.length > 0 && patterns.length > 0 && (
           <button className="mt-5 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 ml-4" onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
         )}
       </div>
     </div>
   );
-  
 }

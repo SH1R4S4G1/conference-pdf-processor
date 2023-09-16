@@ -42,19 +42,25 @@ export default function Home() {
   // アップロードされた一時保存ディレクトリとオリジナルファイルの名前の対応の保持
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);  
 
+  // スクロールヒントの表示
+  const [isScrollable, setIsScrollable] = useState(false);
+  const [scrollIndicatorOpacity, setScrollIndicatorOpacity] = useState(1);
+  
+  // DEV:ファイルリストの変更を監視
   useEffect(() => {
     console.log('fileList has changed:', fileList);
   }, [fileList]);
   
+  // DEV:ページ数が奇数のファイルの変更を監視
   useEffect(() => {
     console.log('oddPageFiles has changed:', oddPageFiles);
   }, [oddPageFiles]);  
 
-  const fetchFiles = async () => {
-    // 一時保存ディレクトリからファイルの一覧を取得。全てのファイルを取得するので使用機会はない。
-    const files = await window.electron.invoke('get-temp-files');
-    setFileList(files);
-  };
+  // const fetchFiles = async () => {
+  //   // 一時保存ディレクトリからファイルの一覧を取得。全てのファイルを取得するので使用機会はない。
+  //   const files = await window.electron.invoke('get-temp-files');
+  //   setFileList(files);
+  // };
 
   useEffect(() => {
     // fetchFiles();
@@ -66,6 +72,7 @@ export default function Home() {
     }
   }, [fileList]);
  
+  // ユーザーがUI上で行ったファイルリスト(uploadedFiles)の更新を、各種ステートに反映する
   useEffect(() => {
     const newFileList = uploadedFiles.map(f => f.tempPath);
     setFileList(newFileList);
@@ -85,6 +92,27 @@ export default function Home() {
 
   }, [uploadedFiles]);  
 
+  // テーブルの横幅に応じて、スクロールヒントを表示するかどうかを判定
+  useEffect(() => {
+    const tableWrapper = document.getElementById('tableWrapper');
+    if (tableWrapper) {
+      const scrollable = tableWrapper.scrollWidth > tableWrapper.clientWidth;
+      setIsScrollable(scrollable);
+      console.log("Is the table scrollable?", scrollable);
+    }
+  }, [uploadedFiles, patterns]);
+
+  // スクロールヒントを表示するかどうかの判定に応じて、ヒントを表示する
+  useEffect(() => {
+    if (isScrollable) {
+      setScrollIndicatorOpacity(1); // ヒントを表示
+      setTimeout(() => {
+        setScrollIndicatorOpacity(0); // 0.5秒後にヒントを非表示
+      }, 500);
+    }
+  }, [isScrollable]);
+
+  // ドラッグ＆ドロップでファイルを投入したときの処理
   const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
   
@@ -135,15 +163,12 @@ export default function Home() {
           setOddPageFiles(prevFiles => [...prevFiles, outputFilePath]);
           console.log("oddPageFiles更新後");
         }
+
       } else {
         alert(`${file.name} is not a supported file type.`);
       }
       
     }
-    // console.log("fetchFiles()前");
-    // // ステートを更新して、フロントエンドにアップロードされたファイルの情報を表示
-    // fetchFiles();
-    // console.log("fetchFiles()後");
   };
 
   // ページ数が奇数のPDFファイルに白紙を差し込む
@@ -157,13 +182,10 @@ export default function Home() {
       }
     }
     console.log('白紙差し込み完了');
-    // ファイルリストを更新
-    // fetchFiles();
   };
   
   
   const handleCombinePDFs = async () => {
-    console.log(fileList);  // ここで fileList の内容を確認
     try {    
       const tempFilePath = await window.electron.invoke('combine-pdfs', {
         files: fileList,
@@ -208,7 +230,6 @@ export default function Home() {
     }
     return combinedFiles;
   };
-  
     
   const addPattern = () => {
     const newPattern: Pattern = {
@@ -219,6 +240,12 @@ export default function Home() {
     setPatterns((prevPatterns) => [...prevPatterns, newPattern]);
   };
 
+  const removePattern = (patternId: number) => {
+    setPatterns((prevPatterns) => {
+      return prevPatterns.filter((pattern) => pattern.id !== patternId);
+    });
+  };  
+
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prevFiles => {
         const newFiles = [...prevFiles];
@@ -226,9 +253,8 @@ export default function Home() {
         return newFiles;
     });
     console.log('uploadedFiles has removed:', uploadedFiles);
-};
+  };
 
-  
   const handleMoveFileUp = (index: number) => {
     if (index === 0) return;
     const newFiles = [...uploadedFiles];
@@ -247,7 +273,6 @@ export default function Home() {
     setUploadedFiles(newFiles);
   };
   
-
   return (
     <div className="p-10">
       <div 
@@ -258,15 +283,17 @@ export default function Home() {
         PDFをここにドロップ
       </div>
   
-      <div className="mt-10">
-        <h2 className="text-2xl font-semibold mb-5">処理前のファイルリスト</h2>
-        <table className="w-full border rounded-lg">
+      <div id="tableWrapper" className="mt-10 relative overflow-x-auto">
+        <table className="w-full border rounded-lg ">
           <thead>
             <tr className="text-left">
               <th className="px-4 py-2 w-1/3 border">ファイル名</th>
               {patterns.map((pattern, index) => (
                 <th key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
                   パターン {pattern.id}
+                  {patterns.length > 1 && (
+                    <button onClick={() => removePattern(pattern.id)}>削除</button>
+                  )}
                   <br />
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -332,6 +359,17 @@ export default function Home() {
           </tbody>
         </table>
   
+        {isScrollable && (
+          <div
+          className={`absolute inset-x-0 top-0 h-full bg-white bg-opacity-60 flex justify-center items-center transition-opacity duration-500 ${scrollIndicatorOpacity === 0 ? 'hidden' : 'block'}`}
+          style={{ opacity: scrollIndicatorOpacity }}
+          >
+          <p className="text-lg font-bold">横スクロール可能</p>
+          </div>
+        )}
+
+      </div>
+
         {uploadedFiles.length > 0 && (
           <button className="mt-5 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={addPattern}>＋</button>
         )}
@@ -339,7 +377,6 @@ export default function Home() {
         {uploadedFiles.length > 0 && patterns.length > 0 && (
           <button className="mt-5 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 ml-4" onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
         )}
-      </div>
     </div>
   );
 }

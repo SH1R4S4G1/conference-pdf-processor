@@ -161,7 +161,7 @@ ipcMain.handle('add-blank-page', async (event, filePath) => {
 });
 
 // PDFを結合する
-ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNumbers: boolean }) => {
+ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNumbers: boolean, position: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right', size: number }) => {
   console.log("Received files for combining:", data.files);
   const mergedPdfDoc = await PDFDocument.create();
   let totalPages = 0;  // 追加: 連番のための変数
@@ -178,20 +178,34 @@ ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNum
   }
 
   if (data.addPageNumbers) {  // ページ数を追加する場合のみ
-      const font = await mergedPdfDoc.embedFont(StandardFonts.Helvetica);
-      const pages = mergedPdfDoc.getPages();
-      for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          const { width } = page.getSize();
-          page.drawText(String(totalPages + i + 1), {
-              x: width - 50,
-              y: 30,
-              size: 30,
-              font: font,
-              color: rgb(0, 0, 0),
-          });
-      }
-      totalPages += pages.length;  // 連番の更新
+    const font = await mergedPdfDoc.embedFont(StandardFonts.Helvetica);
+    const pages = mergedPdfDoc.getPages();
+
+    // ページの位置とサイズに基づいて座標を計算する関数
+    const computeCoordinates = (width: number, height: number) => {
+        switch (data.position) {
+            case 'top-left': return { x: 50, y: height - 30 };
+            case 'top-center': return { x: (width / 2) - (data.size / 2 * 2.5), y: height - 30 };  // サイズに応じて中央揃え
+            case 'top-right': return { x: width - 50, y: height - 30 };
+            case 'bottom-left': return { x: 50, y: 30 };
+            case 'bottom-center': return { x: (width / 2) - (data.size / 2 * 2.5), y: 30 };  // サイズに応じて中央揃え
+            case 'bottom-right': return { x: width - 50, y: 30 };
+        }
+    };
+
+    for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const { width, height } = page.getSize();
+        const coordinates = computeCoordinates(width, height);
+        page.drawText(String(totalPages + i + 1), {
+            x: coordinates.x,
+            y: coordinates.y,
+            size: data.size,
+            font: font,
+            color: rgb(0, 0, 0),
+        });
+    }
+    totalPages += pages.length;  // 連番の更新
   }
 
   console.log(`Combined PDF has ${mergedPdfDoc.getPageCount()} pages.`);
@@ -206,33 +220,64 @@ ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNum
 
 
 // ページ番号を追加する
-ipcMain.handle('add-page-numbers', async (event, filePath: string) => {
-  try {
-      const pdfBytes = fs.readFileSync(filePath);
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const pages = pdfDoc.getPages();
-      for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          const { width } = page.getSize();
-          page.drawText(String(i + 1), {
-              x: width - 50,
-              y: 30,
-              size: 30,
-              font: font,
-              color: rgb(0, 0, 0),
-          });
-      }
-      const modifiedPdfBytes = await pdfDoc.save();
-      const tempDir = appTempDir;
-      const outputPath = path.join(tempDir, `numbered-${Date.now()}.pdf`);
-      fs.writeFileSync(outputPath, modifiedPdfBytes);
-      return outputPath;
-  } catch (error) {
-      console.error("Error adding page numbers:", error);
-      throw error;
-  }
-});
+// ipcMain.handle('add-page-numbers', async (event, { filePath, position, size }) => {
+//   try {
+//     const pdfBytes = fs.readFileSync(filePath);
+//     const pdfDoc = await PDFDocument.load(pdfBytes);
+//     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+//     const pages = pdfDoc.getPages();
+
+//     pages.forEach((page, i) => {
+//       const { width, height } = page.getSize();
+//       let x, y;
+      
+//       switch (position) {
+//         case 'top-left':
+//           x = 50;
+//           y = height - 30;
+//           break;
+//         case 'top-center':
+//           x = (width / 2) - (size / 2);
+//           y = height - 30;
+//           break;
+//         case 'top-right':
+//           x = width - 50;
+//           y = height - 30;
+//           break;
+//         case 'bottom-left':
+//           x = 50;
+//           y = 30;
+//           break;
+//         case 'bottom-center':
+//           x = (width / 2) - (size / 2);
+//           y = 30;
+//           break;
+//         case 'bottom-right':
+//         default:
+//           x = width - 50;
+//           y = 30;
+//           break;
+//       }
+
+//       page.drawText(String(i + 1), {
+//         x,
+//         y,
+//         size: Number(size),
+//         font: font,
+//         color: rgb(0, 0, 0),
+//       });
+//     });
+
+//     const modifiedPdfBytes = await pdfDoc.save();
+//     const tempDir = appTempDir;
+//     const outputPath = path.join(tempDir, `numbered-${Date.now()}.pdf`);
+//     fs.writeFileSync(outputPath, modifiedPdfBytes);
+//     return outputPath;
+//   } catch (error) {
+//     console.error("Error adding page numbers:", error);
+//     throw error;
+//   }
+// });
 
 // PDFを保存するためにダイアログを開く
 ipcMain.handle('open-file', async (event, filePath: string) => {

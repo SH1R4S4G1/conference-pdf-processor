@@ -14,6 +14,8 @@ type Pattern = {
   addPageNumbers: boolean;
   oddPageFiles: string[];
   selectedFiles: string[];
+  position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+  size?: number;
 };
 
 type UploadedFile = {
@@ -47,6 +49,10 @@ export default function Home() {
   // スクロールヒントの表示
   const [isScrollable, setIsScrollable] = useState(false);
   const [scrollIndicatorOpacity, setScrollIndicatorOpacity] = useState(1);
+
+  // ページ番号の設定
+  const [pageNumberPosition, setPageNumberPosition] = useState('bottom-right');
+  const [pageNumberSize, setPageNumberSize] = useState(16);
   
   // DEV:ファイルリストの変更を監視
   useEffect(() => {
@@ -175,17 +181,23 @@ export default function Home() {
   };
 
   const handleCombinePDFsForAllPatterns = async () => {
-    for (const pattern of patterns) {
-    // ここでselectedFilesの内容を参照して処理対象のファイルを絞り込む
-    const filesToProcess = uploadedFiles.filter(file => pattern.selectedFiles.includes(file.tempPath));
-    // const combinedFiles = await handleCombinePDFs(pattern, filesToProcess);
-    const combinedFiles = await combineFilesForPattern(pattern, filesToProcess);
-    
-      const tempFilePath = await window.electron.invoke('combine-pdfs', {
-        files: combinedFiles,
-        addPageNumbers: pattern.addPageNumbers
-      });
-      await window.electron.invoke('open-file', tempFilePath); // 合成したPDFを開く
+    try {    
+      for (const pattern of patterns) {
+      // ここでselectedFilesの内容を参照して処理対象のファイルを絞り込む
+      const filesToProcess = uploadedFiles.filter(file => pattern.selectedFiles.includes(file.tempPath));
+      // const combinedFiles = await handleCombinePDFs(pattern, filesToProcess);
+      const combinedFiles = await combineFilesForPattern(pattern, filesToProcess);
+      
+        const tempFilePath = await window.electron.invoke('combine-pdfs', {
+          files: combinedFiles,
+          addPageNumbers: pattern.addPageNumbers,
+          position: pattern.position,
+          size: pattern.size
+        });
+        await window.electron.invoke('open-file', tempFilePath); // 合成したPDFを開く
+      }
+    } catch (error) {
+      console.error("Error combining PDFs:", error);
     }
   };
   
@@ -206,10 +218,12 @@ export default function Home() {
     
   const addPattern = () => {
     const newPattern: Pattern = {
-      id: Date.now(),
+      id: patterns.length + 1,
       addPageNumbers: false,
       oddPageFiles: [],
-      selectedFiles: uploadedFiles.map(file => file.tempPath)  // すべてのファイルをデフォルトで選択する
+      selectedFiles: uploadedFiles.map(file => file.tempPath),  // すべてのファイルをデフォルトで選択する
+      position: 'bottom-right',
+      size: 16
     };
     setPatterns((prevPatterns) => [...prevPatterns, newPattern]);
   };
@@ -289,16 +303,55 @@ export default function Home() {
                         }}
                       />
                       <span
-                          className="block w-[2em] cursor-pointer bg-gray-500 rounded-full 
-                          p-[1px] after:block after:h-[1em] after:w-[1em] after:rounded-full 
-                          after:bg-white after:transition peer-checked:bg-blue-500 
-                          peer-checked:after:translate-x-[calc(100%-2px)]"
-                        >
+                        className="block w-[2em] cursor-pointer bg-gray-500 rounded-full 
+                        p-[1px] after:block after:h-[1em] after:w-[1em] after:rounded-full 
+                        after:bg-white after:transition peer-checked:bg-blue-500 
+                        peer-checked:after:translate-x-[calc(100%-2px)]"
+                      >
                       </span>
                       <span>ページ数を付与</span>
                     </label>
+                    {/* 位置の選択ドロップダウン */}
+                    <select
+                      value={pattern.position}
+                      onChange={e => {
+                        const updatedPatterns = patterns.map(p => {
+                          if (p.id === pattern.id) {
+                            return { ...p, position: e.target.value as 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' };
+                          }
+                          return p;
+                        });
+                        setPatterns(updatedPatterns);
+                      }}
+                    >
+                      <option value="top-left">左上</option>
+                      <option value="top-center">中央上</option>
+                      <option value="top-right">右上</option>
+                      <option value="bottom-left">左下</option>
+                      <option value="bottom-center">中央下</option>
+                      <option value="bottom-right">右下</option>
+                    </select>
+
+                    {/* サイズの選択ドロップダウン */}
+                    <select
+                      value={pattern.size}
+                      onChange={e => {
+                        const updatedPatterns = patterns.map(p => {
+                          if (p.id === pattern.id) {
+                            return { ...p, size: parseInt(e.target.value) };
+                          }
+                          return p;
+                        });
+                        setPatterns(updatedPatterns);
+                      }}
+                    >
+                      {Array.from({ length: 57 }, (_, i) => i + 8).map(size => (
+                        <option key={size} value={size}>{size}px</option>
+                      ))}
+                    </select>
                   </th>
                 ))}
+
               </tr>
             </thead>
             <tbody>

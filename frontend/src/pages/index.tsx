@@ -12,6 +12,8 @@ import * as path from 'path';
 type Pattern = {
   id: number;
   addPageNumbers: boolean;
+  createContentList: boolean;
+  addBlankPageForContentList: boolean;
   oddPageFiles: string[];
   selectedFiles: string[];
   position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
@@ -21,24 +23,15 @@ type Pattern = {
 type UploadedFile = {
   originalName: string;
   tempPath: string;
+  pageCount: number;
 };
 
 export default function Home() {
-  const [pdfData, setPdfData] = useState<Blob | null>(null);
-  const [thumbnail, setThumbnail] = useState<string | null>(null);  
+  // 生のファイル一覧
   const [fileList, setFileList] = useState<string[]>([]);
 
   // ページ数が奇数のPDFファイルの一覧
   const [oddPageFiles, setOddPageFiles] = useState<string[]>([]);
-
-  // ページ数を付与するかどうかのフラグ
-  const [addPageNumbers, setAddPageNumbers] = useState(false);
-
-  // 白紙を差し込むファイルの一覧
-  const [filesToInsertBlank, setFilesToInsertBlank] = useState<string[]>([]);
-
-  // 処理を実行するためのファイルの一覧（FileListのコピー）
-  const [targetFileList, setTargetFileList] = useState<Array<{ id: number, path: string }>>([]);
 
   // 処理のパターンの一覧
   const [patterns, setPatterns] = useState<Pattern[]>([]);
@@ -50,10 +43,6 @@ export default function Home() {
   const [isScrollable, setIsScrollable] = useState(false);
   const [scrollIndicatorOpacity, setScrollIndicatorOpacity] = useState(1);
 
-  // ページ番号の設定
-  const [pageNumberPosition, setPageNumberPosition] = useState('bottom-right');
-  const [pageNumberSize, setPageNumberSize] = useState(16);
-  
   // DEV:ファイルリストの変更を監視
   useEffect(() => {
     console.log('fileList has changed:', fileList);
@@ -63,12 +52,6 @@ export default function Home() {
   useEffect(() => {
     console.log('oddPageFiles has changed:', oddPageFiles);
   }, [oddPageFiles]);  
-
-  // const fetchFiles = async () => {
-  //   // 一時保存ディレクトリからファイルの一覧を取得。全てのファイルを取得するので使用機会はない。
-  //   const files = await window.electron.invoke('get-temp-files');
-  //   setFileList(files);
-  // };
 
   useEffect(() => {
     // fetchFiles();
@@ -159,11 +142,7 @@ export default function Home() {
           await window.electron.invoke('save-to-temp', new Uint8Array(fileBuffer), outputFilePath);
         }
 
-        // オリジナルのファイル名を保存
-        setUploadedFiles(prev => [...prev, { originalName: file.name, tempPath: outputFilePath }]);
-        setPatterns(prev => prev.map(p => ({ ...p, selectedFiles: [...p.selectedFiles, outputFilePath] })));
-
-          // 処理済みPDFからページ数を取得
+        // 処理済みPDFからページ数を取得
         const pageCount = await window.electron.invoke('get-pdf-page-count', outputFilePath);
         console.log(pageCount);
         if (pageCount % 2 !== 0) {
@@ -173,6 +152,10 @@ export default function Home() {
           console.log("oddPageFiles更新後");
         }
 
+        // オリジナルのファイル名、ページ数を保存
+        setUploadedFiles(prev => [...prev, { originalName: file.name, tempPath: outputFilePath, pageCount: pageCount}]);
+        setPatterns(prev => prev.map(p => ({ ...p, selectedFiles: [...p.selectedFiles, outputFilePath] })));
+
       } else {
         alert(`${file.name} is not a supported file type.`);
       }
@@ -180,28 +163,72 @@ export default function Home() {
     }
   };
 
+  // ファイルを統合する
   const handleCombinePDFsForAllPatterns = async () => {
     try {    
+      let contentListPdfPath;  // 資料一覧のPDFファイルのパス
+
       for (const pattern of patterns) {
-      // ここでselectedFilesの内容を参照して処理対象のファイルを絞り込む
-      const filesToProcess = uploadedFiles.filter(file => pattern.selectedFiles.includes(file.tempPath));
-      // const combinedFiles = await handleCombinePDFs(pattern, filesToProcess);
-      const combinedFiles = await combineFilesForPattern(pattern, filesToProcess);
-      
+        // ここでselectedFilesの内容を参照して処理対象のファイルを絞り込む
+        const filesToProcess = uploadedFiles.filter(file => pattern.selectedFiles.includes(file.tempPath));
+
+        let currentPage = 1;  // 現在のページ番号を追跡するための変数
+        const filesWithStartPages = filesToProcess.map(file => {
+          const startPage = currentPage;
+          currentPage += file.pageCount;  // 次のファイルの開始ページを計算
+  
+          if (patterns.some(pattern => pattern.oddPageFiles.includes(file.tempPath) && pattern.selectedFiles.includes(file.tempPath))) {
+              currentPage++;  // 白紙差し込みが適用される場合、ページ数を+1する
+          }
+  
+          return { ...file, startPage };
+        });
+
+        // 資料一覧のPDFファイルを作成
+        if (pattern.createContentList) {
+          const contentListData = filesWithStartPages.map(file => ({
+              name: file.originalName,
+              pageCount: file.pageCount,
+              startPage: file.startPage  // 開始ページの情報を追加
+          }));
+
+          contentListPdfPath = await window.electron.invoke('create-content-list', contentListData);
+          const pageCount = await window.electron.invoke('get-pdf-page-count', contentListPdfPath);
+          if (pattern.addBlankPageForContentList && pageCount % 2 !== 0) {
+              const newContentListPdfPath = await window.electron.invoke('add-blank-page', contentListPdfPath);
+              contentListPdfPath = newContentListPdfPath;
+          }
+        }
+
+        // 処理対象のファイルの白紙差込み
+        const combinedFiles = await insertBlankForPattern(pattern, filesToProcess);
+
+        // 白紙差し込み実行後のファイルを結合
         const tempFilePath = await window.electron.invoke('combine-pdfs', {
           files: combinedFiles,
           addPageNumbers: pattern.addPageNumbers,
           position: pattern.position,
           size: pattern.size
         });
-        await window.electron.invoke('open-file', tempFilePath); // 合成したPDFを開く
+
+        // 統合PDFと資料一覧のPDFを結合
+        if (pattern.createContentList && contentListPdfPath) {
+          const finalPdfPath = await window.electron.invoke('combine-pdfs', {
+              files: [contentListPdfPath, tempFilePath],
+              addPageNumbers: false
+          });
+          await window.electron.invoke('open-file', finalPdfPath);  // 合成したPDFを開く
+        } else {
+          await window.electron.invoke('open-file', tempFilePath);  // 合成したPDFを開く
+        }
       }
     } catch (error) {
       console.error("Error combining PDFs:", error);
     }
   };
   
-  const combineFilesForPattern = async (pattern: Pattern, filesToProcess: Array<UploadedFile>) => {
+  // 白紙差し込みを実行する
+  const insertBlankForPattern = async (pattern: Pattern, filesToProcess: Array<UploadedFile>) => {
     let combinedFiles: string[] = [];
   
     for (const file of filesToProcess) {
@@ -220,6 +247,8 @@ export default function Home() {
     const newPattern: Pattern = {
       id: patterns.length + 1,
       addPageNumbers: false,
+      createContentList: false,
+      addBlankPageForContentList: false,  
       oddPageFiles: [],
       selectedFiles: uploadedFiles.map(file => file.tempPath),  // すべてのファイルをデフォルトで選択する
       position: 'bottom-right',
@@ -261,6 +290,13 @@ export default function Home() {
     setUploadedFiles(newFiles);
   };
   
+  // TODO: ページ数を付与しないを選んだら同時にファイル一覧作成及びファイル一覧への白紙差し込みを選択解除する
+  // TODO: ファイル一覧作成を解除したらファイル一覧への白紙差し込みを選択解除する
+  // TODO: パターン名を変更できるようにする。パターン名の重複を避ける
+  // TODO: パターンの順番を変更できるようにする
+  // TODO: テーブルが表示されていない間だけ、見かけのドロップエリアを広げる
+  // TODO: テーブルの幅が固定長になるようにする
+  // TODO: ひとつもファイルが選択されていないパターンは処理の対象外にする
   return (
     <div 
     className="p-10 h-screen w-screen"
@@ -310,7 +346,46 @@ export default function Home() {
                       >
                       </span>
                       <span>ページ数を付与</span>
+                  </label>
+
+                  {pattern.addPageNumbers && (
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={pattern.createContentList}
+                        onChange={e => {
+                          const updatedPatterns = patterns.map(p => {
+                            if (p.id === pattern.id) {
+                              return { ...p, createContentList: e.target.checked };
+                            }
+                            return p;
+                          });
+                          setPatterns(updatedPatterns);
+                        }}
+                      />
+                      <span>ファイル一覧を作成</span>
                     </label>
+                  )}
+
+                  {pattern.addPageNumbers && pattern.createContentList && (
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={pattern.addBlankPageForContentList}
+                        onChange={e => {
+                          const updatedPatterns = patterns.map(p => {
+                            if (p.id === pattern.id) {
+                              return { ...p, addBlankPageForContentList: e.target.checked };
+                            }
+                            return p;
+                          });
+                          setPatterns(updatedPatterns);
+                        }}
+                      />
+                      <span>ファイル一覧が奇数の場合白紙を差込む</span>
+                    </label>
+                  )}
+
                     {/* 位置の選択ドロップダウン */}
                     <select
                       value={pattern.position}

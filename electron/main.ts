@@ -2,19 +2,22 @@
 import { app, BrowserWindow,ipcMain,shell } from 'electron';
 import { exec } from 'child_process';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import * as os from 'os';
+import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
 import * as path from 'path';
 
 let mainWindow: Electron.BrowserWindow | null;
 let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
 
+// TODO: ウィンドウサイズを変更できないようにする
+// TODO: メニューバーを非表示にする
+// TODO: 起動時に前のファイルが残っている場合は削除する
 const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: false, // これはセキュリティ上の理由で推奨されています
+      nodeIntegration: false, // セキュリティ上の理由で推奨
       contextIsolation: true,
       preload: path.join(__dirname, '..\\..\\electron\\preload.js')
     },
@@ -218,67 +221,6 @@ ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNum
   return outputPath;
 });
 
-
-// ページ番号を追加する
-// ipcMain.handle('add-page-numbers', async (event, { filePath, position, size }) => {
-//   try {
-//     const pdfBytes = fs.readFileSync(filePath);
-//     const pdfDoc = await PDFDocument.load(pdfBytes);
-//     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-//     const pages = pdfDoc.getPages();
-
-//     pages.forEach((page, i) => {
-//       const { width, height } = page.getSize();
-//       let x, y;
-      
-//       switch (position) {
-//         case 'top-left':
-//           x = 50;
-//           y = height - 30;
-//           break;
-//         case 'top-center':
-//           x = (width / 2) - (size / 2);
-//           y = height - 30;
-//           break;
-//         case 'top-right':
-//           x = width - 50;
-//           y = height - 30;
-//           break;
-//         case 'bottom-left':
-//           x = 50;
-//           y = 30;
-//           break;
-//         case 'bottom-center':
-//           x = (width / 2) - (size / 2);
-//           y = 30;
-//           break;
-//         case 'bottom-right':
-//         default:
-//           x = width - 50;
-//           y = 30;
-//           break;
-//       }
-
-//       page.drawText(String(i + 1), {
-//         x,
-//         y,
-//         size: Number(size),
-//         font: font,
-//         color: rgb(0, 0, 0),
-//       });
-//     });
-
-//     const modifiedPdfBytes = await pdfDoc.save();
-//     const tempDir = appTempDir;
-//     const outputPath = path.join(tempDir, `numbered-${Date.now()}.pdf`);
-//     fs.writeFileSync(outputPath, modifiedPdfBytes);
-//     return outputPath;
-//   } catch (error) {
-//     console.error("Error adding page numbers:", error);
-//     throw error;
-//   }
-// });
-
 // PDFを保存するためにダイアログを開く
 ipcMain.handle('open-file', async (event, filePath: string) => {
   try {
@@ -287,4 +229,36 @@ ipcMain.handle('open-file', async (event, filePath: string) => {
     console.error("Error opening file:", error);
     throw error;
   }
+});
+
+ipcMain.handle('create-content-list', async (event, fileInfos: Array<{ name: string, pageCount: number, startPage: number }>) => {
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  // 外部フォントを読み込む
+  const fontBytes = fs.readFileSync(path.join(__dirname, '..\\..\\electron\\assets\\fonts\\ipaexm.ttf'));
+  const font = await pdfDoc.embedFont(fontBytes);
+
+  const page = pdfDoc.addPage([600, 800]);  // 適切なサイズに調整してください
+
+  let yOffset = 750;  // Y座標のオフセット（初期値）
+
+  for (const fileInfo of fileInfos) {
+      const text = `${fileInfo.name} - 開始ページ: ${fileInfo.startPage}`;
+      page.drawText(text, {
+          x: 50,
+          y: yOffset,
+          size: 20,
+          font: font,
+          color: rgb(0, 0, 0),
+      });
+      yOffset -= 25;  // Y座標を下に移動
+  }
+
+  const contentListPdfBytes = await pdfDoc.save();
+  const tempDir = appTempDir;
+  const outputPath = path.join(tempDir, `content-list-${Date.now()}.pdf`);
+  fs.writeFileSync(outputPath, contentListPdfBytes);
+
+  return outputPath;
 });

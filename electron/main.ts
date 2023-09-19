@@ -1,7 +1,7 @@
 // main.ts
 import { app, BrowserWindow,ipcMain,shell } from 'electron';
 import { exec } from 'child_process';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -164,7 +164,7 @@ ipcMain.handle('add-blank-page', async (event, filePath) => {
 });
 
 // PDFを結合する
-ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNumbers: boolean, position: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right', size: number }) => {
+ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNumbers: boolean, alignOrientation: boolean, position: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right', size: number }) => {
   console.log("Received files for combining:", data.files);
   const mergedPdfDoc = await PDFDocument.create();
   let totalPages = 0;  // 追加: 連番のための変数
@@ -178,6 +178,17 @@ ipcMain.handle('combine-pdfs', async (event, data: { files: string[], addPageNum
           mergedPdfDoc.addPage(page);
       }
       console.log(`File ${filePath} has ${pdfDoc.getPageCount()} pages.`);
+  }
+
+  // 横長のPDFを縦長に回転する。ページ数を付与する前に実行する必要がある
+  if (data.alignOrientation) {
+    const pages = mergedPdfDoc.getPages();
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      if (width > height) {
+          page.setRotation(degrees(270));
+      }
+    }
   }
 
   if (data.addPageNumbers) {  // ページ数を追加する場合のみ

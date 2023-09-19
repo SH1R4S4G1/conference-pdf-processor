@@ -3,7 +3,9 @@
 
   import React, { useState, useEffect } from 'react';
   import { FaRegTrashAlt, FaFileUpload } from 'react-icons/fa';
-  import FileRowWithControls from '../components/FileRowWithControls';
+  import FileRowWithControls from './../components/FileRowWithControls';
+  import CharacterComponent from './../components/CharacterComponent';
+  import { AppStatus } from './../types/types';
   import axios from 'axios';
   import { ipcRenderer } from 'electron';
   import * as os from 'os';
@@ -43,6 +45,9 @@
     // スクロールヒントの表示
     const [isScrollable, setIsScrollable] = useState(false);
     const [scrollIndicatorOpacity, setScrollIndicatorOpacity] = useState(1);
+
+    // アプリケーションの状態
+    const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
 
     // DEV:ファイルリストの変更を監視
     useEffect(() => {
@@ -104,9 +109,25 @@
       }
     }, [isScrollable]);
 
+    useEffect(() => {
+      console.log("Status has changed:", status);
+
+      if (status === AppStatus.COMPLETED || status === AppStatus.ERROR) {
+        const timer = setTimeout(() => {
+          setStatus(AppStatus.IDLE);
+        }, 5000);  // 5秒後にIDLEに戻す
+    
+        // useEffectのクリーンアップ関数。コンポーネントがアンマウントされる時や、次のuseEffectが実行される前に実行される
+        return () => {
+          clearTimeout(timer);
+        };
+      }
+    }, [status]);  // statusが変更されるたびにこのuseEffectが再評価される    
+
     // ドラッグ＆ドロップでファイルを投入したときの処理
     const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      setStatus(AppStatus.PROCESSING);
     
       // ドロップされたファイルを取得
       const files = event.dataTransfer.files;
@@ -157,7 +178,9 @@
           setUploadedFiles(prev => [...prev, { originalName: file.name, tempPath: outputFilePath, pageCount: pageCount}]);
           setPatterns(prev => prev.map(p => ({ ...p, selectedFiles: [...p.selectedFiles, outputFilePath] })));
 
+          setStatus(AppStatus.COMPLETED);
         } else {
+          setStatus(AppStatus.ERROR);
           alert(`${file.name} is not a supported file type.`);
         }
         
@@ -167,6 +190,7 @@
     // ファイルを統合する
     const handleCombinePDFsForAllPatterns = async () => {
       try {    
+        setStatus(AppStatus.PROCESSING);
         let contentListPdfPath;  // 資料一覧のPDFファイルのパス
 
         for (const pattern of patterns) {
@@ -224,8 +248,10 @@
             await window.electron.invoke('open-file', tempFilePath);  // 合成したPDFを開く
           }
         }
+        setStatus(AppStatus.COMPLETED);
       } catch (error) {
         console.error("Error combining PDFs:", error);
+        setStatus(AppStatus.ERROR);
       }
     };
     
@@ -543,8 +569,24 @@
           )}
     
           {uploadedFiles.length > 0 && patterns.length > 0 && (
-            <button className="mt-5 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 ml-4" onClick={handleCombinePDFsForAllPatterns}>ファイルを統合する</button>
+          <button 
+              disabled={status === AppStatus.PROCESSING} 
+              className={`mt-5 p-2 rounded-lg ml-4 
+                          ${status !== AppStatus.PROCESSING 
+                              ? "bg-green-500 text-white hover:bg-green-600" 
+                              : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
+                          }`} 
+              onClick={handleCombinePDFsForAllPatterns}>
+              ファイルを統合する
+          </button>
           )}
+
+
+        <div className="fixed bottom-2.5 right-2.5">
+          <CharacterComponent status={status} />
+        </div>
+  
       </div>
+
     );
   }

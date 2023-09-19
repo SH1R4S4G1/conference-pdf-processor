@@ -10,5 +10,10 @@ module.exports = {
       '/': { page: '/' },
       // 必要に応じて、その他のページも追加...
     };
+  },
+
+  // 画像最適化の無効化
+  images: {
+    unoptimized: true
   }
 };

@@ -342,12 +342,12 @@
 
         {uploadedFiles.length > 0 && (
           <div id="tableWrapper" className="mt-10 relative overflow-x-auto">
-            <table className="w-full border rounded-lg ">
+            <table className="table-fixed border rounded-lg ">
               <thead>
                 <tr className="text-left">
-                  <th className="px-4 py-2 w-1/3 border">ファイル名</th>
+                  <th className="w-[250px] px-4 py-2 border">ファイル名</th>
                   {patterns.map((pattern, index) => (
-                    <th key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+                    <th key={pattern.id} className={`w-[200px] px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
                       パターン {pattern.id}
                       {patterns.length > 1 && (
                         <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
@@ -474,13 +474,12 @@
                       </select>
                     </th>
                   ))}
-
                 </tr>
               </thead>
               <tbody>
                 {uploadedFiles.map((file, index) => (
                   <tr key={file.tempPath}>
-                    <td className="px-4 py-2 border flex items-center">
+                    <td className="w-[250px] px-4 py-2 border flex items-center">
                       <FileRowWithControls
                         fileName={file.originalName}
                         isFirst={index === 0}
@@ -491,7 +490,7 @@
                       />
                     </td>
                     {patterns.map((pattern, index) => (
-                    <td key={pattern.id} className={`px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+                    <td key={pattern.id} className={`w-[200px] px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
                       <label className="flex items-center">
                         <input
                           type="checkbox"

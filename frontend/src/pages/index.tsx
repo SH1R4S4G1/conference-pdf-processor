@@ -361,7 +361,14 @@
                           onChange={e => {
                             const updatedPatterns = patterns.map(p => {
                               if (p.id === pattern.id) {
-                                return { ...p, addPageNumbers: e.target.checked };
+                                const newAddPageNumbers = e.target.checked;
+                                return { 
+                                  ...p, 
+                                  addPageNumbers: newAddPageNumbers,
+                                  // ページ数を付与しない場合、以下の2つのオプションも選択解除
+                                  createContentList: newAddPageNumbers ? p.createContentList : false,
+                                  addBlankPageForContentList: newAddPageNumbers ? p.addBlankPageForContentList : false
+                                };
                               }
                               return p;
                             });
@@ -404,9 +411,14 @@
                           onChange={e => {
                             const updatedPatterns = patterns.map(p => {
                               if (p.id === pattern.id) {
-                                return { ...p, createContentList: e.target.checked };
-                              }
-                              return p;
+                                const newCreateContentList = e.target.checked;
+                                return { 
+                                  ...p, 
+                                  createContentList: newCreateContentList,
+                                  // ファイル一覧を作成しない場合、以下のオプションも選択解除
+                                  addBlankPageForContentList: newCreateContentList ? p.addBlankPageForContentList : false
+                                };
+                              }                              return p;
                             });
                             setPatterns(updatedPatterns);
                           }}

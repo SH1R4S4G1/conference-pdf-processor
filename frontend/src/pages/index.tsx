@@ -342,12 +342,12 @@
 
         {uploadedFiles.length > 0 && (
           <div id="tableWrapper" className="mt-10 relative overflow-x-auto">
-            <table className="table-fixed border rounded-lg ">
-              <thead>
-                <tr className="text-left">
-                  <th className="w-[250px] px-4 py-2 border">ファイル名</th>
-                  {patterns.map((pattern, index) => (
-                    <th key={pattern.id} className={`w-[200px] px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+
+            {/* Header part */}
+            <div className="flex">
+              <div className="flex-none w-60 px-4 py-2 flex items-center justify-center border">ファイル名</div>
+                {patterns.map((pattern, index) => (
+                  <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
                       パターン {pattern.id}
                       {patterns.length > 1 && (
                         <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
@@ -472,25 +472,25 @@
                           <option key={size} value={size}>{size}px</option>
                         ))}
                       </select>
-                    </th>
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {uploadedFiles.map((file, index) => (
-                  <tr key={file.tempPath}>
-                    <td className="w-[250px] px-4 py-2 border items-center">
-                      <FileRowWithControls
-                        fileName={file.originalName}
-                        isFirst={index === 0}
-                        isLast={index === uploadedFiles.length - 1}
-                        onMoveUp={() => handleMoveFileUp(index)}
-                        onMoveDown={() => handleMoveFileDown(index)}
-                        onRemove={() => handleRemoveFile(index)}
-                      />
-                    </td>
-                    {patterns.map((pattern, index) => (
-                    <td key={pattern.id} className={`w-[200px] px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+            </div>
+
+            {/* Data part */}
+            {uploadedFiles.map((file, index) => (
+              <div key={file.tempPath} className={`flex`}>
+                 <div className="flex-none w-60 px-4 py-2 border">
+                     <FileRowWithControls
+                          fileName={file.originalName}
+                          isFirst={index === 0}
+                          isLast={index === uploadedFiles.length - 1}
+                          onMoveUp={() => handleMoveFileUp(index)}
+                          onMoveDown={() => handleMoveFileDown(index)}
+                          onRemove={() => handleRemoveFile(index)}
+                        />
+                  </div>
+            {patterns.map((pattern, index) => (
+              <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
                       <label className="flex items-center">
                         <input
                           type="checkbox"
@@ -543,13 +543,10 @@
                           <span className="ml-2">白紙差込み</span>
                         </label>
                       )}
-                    </td>
-                  ))}
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              </div>
+            ))}
+          </div>
+         ))}
       
             {isScrollable && (
               <div
@@ -564,13 +561,13 @@
         )}
 
           {uploadedFiles.length > 0 && (
-            <button className="mt-5 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={addPattern}>＋</button>
+            <button className="mt-5 mb-5 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={addPattern}>＋</button>
           )}
     
           {uploadedFiles.length > 0 && patterns.length > 0 && (
           <button 
               disabled={status === AppStatus.PROCESSING} 
-              className={`mt-5 p-2 rounded-lg ml-4 
+              className={`mt-5 mb-5 p-2 rounded-lg ml-4 
                           ${status !== AppStatus.PROCESSING 
                               ? "bg-green-500 text-white hover:bg-green-600" 
                               : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"

@@ -479,7 +479,7 @@
               <tbody>
                 {uploadedFiles.map((file, index) => (
                   <tr key={file.tempPath}>
-                    <td className="w-[250px] px-4 py-2 border flex items-center">
+                    <td className="w-[250px] px-4 py-2 border items-center">
                       <FileRowWithControls
                         fileName={file.originalName}
                         isFirst={index === 0}

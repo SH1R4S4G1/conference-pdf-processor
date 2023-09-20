@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.yourcompany.yourAppId",
     "files": [
+      "build_electron/**/*",
       "electron/**/*",
       "frontend/out/**/*"
     ],

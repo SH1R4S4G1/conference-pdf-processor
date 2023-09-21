@@ -25,6 +25,9 @@ const createWindow = () => {
     },
   });
 
+  // Set the title of the window
+  mainWindow.setTitle('kaigiPDF');
+
   // Set the referrer and user agent options to prevent injection attacks
   const options = {
     httpReferrer: 'http://localhost:3000',

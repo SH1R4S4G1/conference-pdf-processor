@@ -50,6 +50,9 @@
     // アプリケーションの状態
     const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
 
+    // ファイル名が編集中かどうか
+    const [isEditingFileName, setIsEditingFileName] = useState(false);
+
     // パターン名の編集
     const [editingPatternId, setEditingPatternId] = useState<number | null>(null);
     const patternInputRef = useRef<HTMLInputElement | null>(null);
@@ -560,6 +563,12 @@
                       updatedFiles[index].originalName = newFileName;
                       setUploadedFiles(updatedFiles);
                     }}
+                    onEditStateChange={(isEditing) => {
+                        if (isEditing) {
+                          setIsEditingFileName(true);
+                        } else
+                          setIsEditingFileName(false);
+                    }}
                   />
                   </div>
             {patterns.map((pattern, index) => (
@@ -634,14 +643,23 @@
         )}
 
           {uploadedFiles.length > 0 && (
-            <button className="mt-5 mb-5 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600" onClick={addPattern}>＋</button>
+            <button
+              disabled={status === AppStatus.PROCESSING || editingPatternId !== null || isEditingFileName}  
+              className={`mt-5 mb-5 p-2 rounded-lg 
+                          ${status !== AppStatus.PROCESSING && editingPatternId === null && !isEditingFileName
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
+                          }`} 
+              onClick={addPattern}>
+              ＋
+            </button>
           )}
     
           {uploadedFiles.length > 0 && patterns.length > 0 && (
-          <button 
-              disabled={status === AppStatus.PROCESSING} 
+            <button 
+              disabled={status === AppStatus.PROCESSING || editingPatternId !== null || isEditingFileName }  
               className={`mt-5 mb-5 p-2 rounded-lg ml-4 
-                          ${status !== AppStatus.PROCESSING 
+                          ${status !== AppStatus.PROCESSING && editingPatternId === null && !isEditingFileName
                               ? "bg-green-500 text-white hover:bg-green-600" 
                               : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
                           }`} 

@@ -9,6 +9,7 @@ type FileRowWithControlsProps = {
   onMoveDown: () => void;
   onRemove: () => void;
   onFileNameChange: (newFileName: string) => void;
+  onEditStateChange?: (isEditing: boolean) => void;
 };
 
   const FileRowWithControls: React.FC<FileRowWithControlsProps> = ({
@@ -18,17 +19,25 @@ type FileRowWithControlsProps = {
     onMoveUp,
     onMoveDown,
     onRemove,
-    onFileNameChange
+    onFileNameChange,
+    onEditStateChange,
   }) => {
     const [editing, setEditing] = useState(false);
     const [tempFileName, setTempFileName] = useState(fileName);
     const inputRef = useRef<HTMLInputElement | null>(null); // 入力フィールドの参照を取得
 
+    const toggleEditing = (isEditing: boolean) => {
+      setEditing(isEditing);
+      if (onEditStateChange) {
+        onEditStateChange(isEditing);
+      }
+    };
+
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (editing && inputRef.current && !inputRef.current.contains(event.target as Node)) {
           // クリックがフォームの外部で行われた場合
-          setEditing(false);
+          toggleEditing(false);
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -36,11 +45,12 @@ type FileRowWithControlsProps = {
         // コンポーネントのアンマウント時にイベントリスナーを削除
         document.removeEventListener("mousedown", handleClickOutside);
       };
+      
     }, [editing]);
 
     const handleFileNameChange = (newFileName: string) => {
       onFileNameChange(newFileName);
-      setEditing(false);
+      toggleEditing(false);
     };
 
   return (
@@ -59,7 +69,7 @@ type FileRowWithControlsProps = {
           autoFocus
         />
       ) : (
-        <span onClick={() => setEditing(true)}>{fileName}</span>
+        <span onClick={() => toggleEditing(true)}>{fileName}</span>
       )}
 
     {editing === false && (

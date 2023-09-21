@@ -1,7 +1,7 @@
   // index.tsx
   // 処理の際には、フルパスを使用する。必要に応じて「path.basename()」を使用してファイル名のみを取得する。
 
-  import React, { useState, useEffect } from 'react';
+  import React, { useState, useRef, useEffect } from 'react';
   import { FaRegTrashAlt, FaFileUpload } from 'react-icons/fa';
   import FileRowWithControls from './../components/FileRowWithControls';
   import CharacterComponent from './../components/CharacterComponent';
@@ -49,6 +49,10 @@
 
     // アプリケーションの状態
     const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
+
+    // パターン名の編集
+    const [editingPatternId, setEditingPatternId] = useState<number | null>(null);
+    const patternInputRef = useRef<HTMLInputElement | null>(null);
 
     // DEV:ファイルリストの変更を監視
     useEffect(() => {
@@ -124,6 +128,18 @@
         };
       }
     }, [status]);  // statusが変更されるたびにこのuseEffectが再評価される    
+
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (editingPatternId && patternInputRef.current && !patternInputRef.current.contains(event.target as Node)) {
+          setEditingPatternId(null);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [editingPatternId]);
 
     // ドラッグ＆ドロップでファイルを投入したときの処理
     const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
@@ -323,6 +339,26 @@
       newFiles[index + 1] = temp;
       setUploadedFiles(newFiles);
     };
+
+    const handlePatternNameChange = (id: number, newName: string) => {
+      setPatterns(prev => 
+        prev.map(p => 
+          p.id === id ? {...p, name: newName} : p
+        )
+      );
+    };
+    
+    const handleEnterPress = (e: React.KeyboardEvent, id: number) => {
+      if (e.key === 'Enter') {
+        setEditingPatternId(null);  // 編集モードをオフ
+      }
+    };
+        
+    // const handleFileEnterPress = (e: React.KeyboardEvent, id: string) => {
+    //   if (e.key === 'Enter') {
+    //     setEditingFileId(null);  // 編集モードをオフ
+    //   }
+    // };    
     
     // TODO: 微妙に右側にはみ出している？
     // TODO: ページ数を付与しないを選んだら同時にファイル一覧作成及びファイル一覧への白紙差し込みを選択解除する
@@ -353,7 +389,22 @@
               <div className="flex-none w-60 px-4 py-2 flex items-center justify-center border">ファイル名</div>
                 {patterns.map((pattern, index) => (
                   <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
-                      {pattern.name} {/** パターン名 **/}
+
+                      {editingPatternId === pattern.id ? (
+                        <input
+                          ref={patternInputRef}
+                          type="text"
+                          value={pattern.name}
+                          onChange={e => handlePatternNameChange(pattern.id, e.target.value)}
+                          onKeyDown={e => handleEnterPress(e, pattern.id)}
+                          autoFocus
+                        />
+                      ) : (
+                        <span onClick={() => setEditingPatternId(pattern.id)}>
+                          {pattern.name}
+                        </span>
+                      )}　{/* パターン名の編集 */}
+
                       {patterns.length > 1 && (
                         <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
                       )}
@@ -497,14 +548,19 @@
             {uploadedFiles.map((file, index) => (
               <div key={file.tempPath} className={`flex`}>
                  <div className="flex-none w-60 px-4 py-2 border">
-                     <FileRowWithControls
-                          fileName={file.originalName}
-                          isFirst={index === 0}
-                          isLast={index === uploadedFiles.length - 1}
-                          onMoveUp={() => handleMoveFileUp(index)}
-                          onMoveDown={() => handleMoveFileDown(index)}
-                          onRemove={() => handleRemoveFile(index)}
-                        />
+                 <FileRowWithControls
+                    fileName={file.originalName}
+                    isFirst={index === 0}
+                    isLast={index === uploadedFiles.length - 1}
+                    onMoveUp={() => handleMoveFileUp(index)}
+                    onMoveDown={() => handleMoveFileDown(index)}
+                    onRemove={() => handleRemoveFile(index)}
+                    onFileNameChange={(newFileName) => {
+                      const updatedFiles = [...uploadedFiles];
+                      updatedFiles[index].originalName = newFileName;
+                      setUploadedFiles(updatedFiles);
+                    }}
+                  />
                   </div>
             {patterns.map((pattern, index) => (
               <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
@@ -563,7 +619,7 @@
               </div>
             ))}
           </div>
-         ))}
+            ))}
       
             {isScrollable && (
               <div

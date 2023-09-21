@@ -13,6 +13,7 @@
 
   type Pattern = {
     id: number;
+    name: string;
     addPageNumbers: boolean;
     createContentList: boolean;
     addBlankPageForContentList: boolean;
@@ -193,7 +194,10 @@
         setStatus(AppStatus.PROCESSING);
         let contentListPdfPath;  // 資料一覧のPDFファイルのパス
 
-        for (const pattern of patterns) {
+        // ファイルの統合時に選択されていないパターンを除外
+        const validPatterns = patterns.filter(pattern => pattern.selectedFiles.length > 0);
+
+        for (const pattern of validPatterns) {
           // ここでselectedFilesの内容を参照して処理対象のファイルを絞り込む
           const filesToProcess = uploadedFiles.filter(file => pattern.selectedFiles.includes(file.tempPath));
 
@@ -273,7 +277,8 @@
       
     const addPattern = () => {
       const newPattern: Pattern = {
-        id: patterns.length + 1,
+        id: Date.now(),  // ユニークなIDを設定
+        name: `Pattern ${patterns.length + 1}`,  // 初期名を設定
         addPageNumbers: false,
         createContentList: false,
         addBlankPageForContentList: false,  
@@ -348,7 +353,7 @@
               <div className="flex-none w-60 px-4 py-2 flex items-center justify-center border">ファイル名</div>
                 {patterns.map((pattern, index) => (
                   <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
-                      パターン {pattern.id}
+                      {pattern.name} {/** パターン名 **/}
                       {patterns.length > 1 && (
                         <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
                       )}

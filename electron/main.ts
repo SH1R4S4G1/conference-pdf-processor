@@ -16,19 +16,27 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    resizable: false,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false, // セキュリティ上の理由で推奨
       contextIsolation: true,
-      preload: path.join(__dirname, '..\\..\\electron\\preload.js')
+      preload: path.join(__dirname, '..', '..', 'electron', 'preload.js')
     },
   });
 
-  // 環境に応じてURLをロード
+  // Set the referrer and user agent options to prevent injection attacks
+  const options = {
+    httpReferrer: 'http://localhost:3000',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+  };
+
+  // 環境に応じてURLをロード(optionを渡す)
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.webContents.loadURL('http://localhost:3000', options);
   } else {
     //静的エクスポートされたファイルをロード
-    mainWindow.loadFile(path.join(__dirname, '..\\..\\frontend\\out\\index.html'));
+    mainWindow.loadFile(path.join(__dirname, '..', '..', 'frontend', 'out', 'index.html'));
   }
 
   if (!fs.existsSync(appTempDir)) {

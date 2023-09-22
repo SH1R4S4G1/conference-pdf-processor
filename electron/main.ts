@@ -66,6 +66,18 @@ function isAppInstalled(appName: string): Promise<boolean> {
   });
 }
 
+function isLibreOfficeInstalled(): Promise<boolean> {
+  return new Promise((resolve) => {
+    exec('soffice --version', (error, stdout) => {
+      if (error) {
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
 app.on('ready', createWindow);
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -111,6 +123,7 @@ ipcMain.handle('get-temp-files', async () => {
 // wordをpdfに変換
 ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
   const isWordInstalled = await isAppInstalled('winword');
+  const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
   
   if (isWordInstalled) {
     return new Promise((resolve, reject) => {
@@ -125,18 +138,27 @@ ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) =>
         }
       });
     });
+  } else if (isLibreOfficeInstalledFlag) {
+    return new Promise((resolve, reject) => {
+      exec(`soffice --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
+        if (error) {
+          console.error("LibreOffice conversion error:", error);
+          reject(error);
+        } else {
+          resolve(outputFilePath);
+        }
+      });
+    });
   } else {
-    // Convert using LibreOffice
-    const tempDir = appTempDir;
-    const outputPath = path.join(tempDir, `converted-${Date.now()}.pdf`);
-    execSync(`soffice --convert-to pdf "${filePath}" --outdir "${tempDir}"`);
-    return outputPath;
+    // Neither Microsoft Word nor LibreOffice are installed
+    throw new Error("No suitable application found for conversion.");
   }
 });
 
 // Excelをpdfに変換
 ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) => {
   const isExcelInstalled = await isAppInstalled('excel');
+  const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
   
   if (isExcelInstalled) {
     return new Promise((resolve, reject) => {
@@ -150,21 +172,28 @@ ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) =
         }
       });
     });
+  } else if (isLibreOfficeInstalledFlag) {
+    return new Promise((resolve, reject) => {
+      exec(`soffice --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
+        if (error) {
+          console.error("LibreOffice conversion error:", error);
+          reject(error);
+        } else {
+          resolve(outputFilePath);
+        }
+      });
+    });
   } else {
-    // Convert using LibreOffice
-    const tempDir = appTempDir;
-    const outputPath = path.join(tempDir, `converted-${Date.now()}.pdf`);
-    execSync(`soffice --convert-to pdf "${filePath}" --outdir "${tempDir}"`);
-    return outputPath;
+    // Neither Microsoft Exccel nor LibreOffice are installed
+    throw new Error("No suitable application found for conversion.");
   }
 });
-
-
 
 // PowerPointをpdfに変換
 ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => {
   const isPowerPointInstalled = await isAppInstalled('powerpnt');
-  
+  const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
+
   if (isPowerPointInstalled) {
     return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
@@ -177,12 +206,20 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
         }
       });
     });
+  } else if (isLibreOfficeInstalledFlag) {
+    return new Promise((resolve, reject) => {
+      exec(`soffice --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
+        if (error) {
+          console.error("LibreOffice conversion error:", error);
+          reject(error);
+        } else {
+          resolve(outputFilePath);
+        }
+      });
+    });
   } else {
-    // Convert using LibreOffice
-    const tempDir = appTempDir;
-    const outputPath = path.join(tempDir, `converted-${Date.now()}.pdf`);
-    execSync(`soffice --convert-to pdf "${filePath}" --outdir "${tempDir}"`);
-    return outputPath;
+    // Neither Microsoft PowerPoint nor LibreOffice are installed
+    throw new Error("No suitable application found for conversion.");
   }
 });
 

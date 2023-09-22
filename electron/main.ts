@@ -1,10 +1,11 @@
 // main.ts
 import { app, BrowserWindow,ipcMain,shell } from 'electron';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
 import * as path from 'path';
+import regedit from 'regedit';
 
 let mainWindow: Electron.BrowserWindow | null;
 let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
@@ -51,6 +52,20 @@ const createWindow = () => {
   });
 };
 
+function isAppInstalled(appName: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const appRegPath = [`HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${appName.toUpperCase()}.EXE`];
+
+      regedit.list(appRegPath, (err, result) => {
+          if (err) {
+              resolve(false);
+          } else {
+              resolve(true);
+          }
+      });
+  });
+}
+
 app.on('ready', createWindow);
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -95,48 +110,80 @@ ipcMain.handle('get-temp-files', async () => {
 
 // wordをpdfに変換
 ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
-  return new Promise((resolve, reject) => {
-    console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
-    const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
-    exec(command, (error: Error | null) => {
-      if (error) {
-        console.error("Word to PDF conversion error:", error);
-        reject(error);
-      } else {
-        resolve(outputFilePath);
-      }
+  const isWordInstalled = await isAppInstalled('winword');
+  
+  if (isWordInstalled) {
+    return new Promise((resolve, reject) => {
+      console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
+      const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
+      exec(command, (error: Error | null) => {
+        if (error) {
+          console.error("Word to PDF conversion error:", error);
+          reject(error);
+        } else {
+          resolve(outputFilePath);
+        }
+      });
     });
-  });
+  } else {
+    // Convert using LibreOffice
+    const tempDir = appTempDir;
+    const outputPath = path.join(tempDir, `converted-${Date.now()}.pdf`);
+    execSync(`soffice --convert-to pdf "${filePath}" --outdir "${tempDir}"`);
+    return outputPath;
+  }
 });
 
 // Excelをpdfに変換
 ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) => {
-  return new Promise((resolve, reject) => {
-    console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
-    const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
-    exec(command, (error: Error | null) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(outputFilePath);
-      }
+  const isExcelInstalled = await isAppInstalled('excel');
+  
+  if (isExcelInstalled) {
+    return new Promise((resolve, reject) => {
+      console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
+      const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
+      exec(command, (error: Error | null) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(outputFilePath);
+        }
+      });
     });
-  });
+  } else {
+    // Convert using LibreOffice
+    const tempDir = appTempDir;
+    const outputPath = path.join(tempDir, `converted-${Date.now()}.pdf`);
+    execSync(`soffice --convert-to pdf "${filePath}" --outdir "${tempDir}"`);
+    return outputPath;
+  }
 });
+
+
 
 // PowerPointをpdfに変換
 ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => {
-  return new Promise((resolve, reject) => {
-    console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
-    const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.SaveAs('${outputFilePath}', 32); $presentation.Close(); $powerpoint.Quit()"`;
-    exec(command, (error: Error | null) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(outputFilePath);
-      }
+  const isPowerPointInstalled = await isAppInstalled('powerpnt');
+  
+  if (isPowerPointInstalled) {
+    return new Promise((resolve, reject) => {
+      console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
+      const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.SaveAs('${outputFilePath}', 32); $presentation.Close(); $powerpoint.Quit()"`;
+      exec(command, (error: Error | null) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(outputFilePath);
+        }
+      });
     });
-  });
+  } else {
+    // Convert using LibreOffice
+    const tempDir = appTempDir;
+    const outputPath = path.join(tempDir, `converted-${Date.now()}.pdf`);
+    execSync(`soffice --convert-to pdf "${filePath}" --outdir "${tempDir}"`);
+    return outputPath;
+  }
 });
 
 // PDFのページ数を取得

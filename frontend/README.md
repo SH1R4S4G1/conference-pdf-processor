@@ -8,6 +8,7 @@
 ### 必要条件
 - Node.js (推奨バージョン: v14以上)
 - npm or yarn
+- Typescript
 
 ### 手順
 

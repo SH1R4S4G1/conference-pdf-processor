@@ -466,7 +466,14 @@
                           ref={patternInputRef}
                           type="text"
                           value={pattern.name}
-                          onChange={e => handlePatternNameChange(pattern.id, e.target.value)}
+                          onChange={e => {
+                            let newValue = e.target.value;
+                            if (!newValue || newValue.trim() === "") {
+                              newValue = "新しいパターン";
+                            }
+                            handlePatternNameChange(pattern.id, newValue);
+                          }}
+                          
                           onKeyDown={e => handleEnterPress(e, pattern.id)}
                           autoFocus
                         />
@@ -474,7 +481,7 @@
                         <span onClick={() => setEditingPatternId(pattern.id)}>
                           {pattern.name}
                         </span>
-                      )}　{/* パターン名の編集 */}
+                      )} {/* パターン名の編集 */}
 
                       {patterns.length > 1 && (
                         <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
@@ -628,6 +635,8 @@
                     onRemove={() => handleRemoveFile(index)}
                     onFileNameChange={(newFileName) => {
                       const updatedFiles = [...uploadedFiles];
+                      // newFileNameが空欄だった場合、「新しいファイル」を設定
+                      // if (!newFileName || newFileName.trim() === "") {newFileName = "新しいファイル";}
                       updatedFiles[index].originalName = newFileName;
                       setUploadedFiles(updatedFiles);
                     }}

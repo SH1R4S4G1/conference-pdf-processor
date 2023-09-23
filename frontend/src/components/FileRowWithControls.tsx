@@ -49,6 +49,11 @@ type FileRowWithControlsProps = {
     }, [editing]);
 
     const handleFileNameChange = (newFileName: string) => {
+      // newFileNameが空欄だった場合、「新しいファイル」を設定
+      if (!newFileName || newFileName.trim() === "") {
+        newFileName = "新しいファイル";
+      }
+      setTempFileName(newFileName); // ローカルステートを更新
       onFileNameChange(newFileName);
       toggleEditing(false);
     };

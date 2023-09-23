@@ -10,10 +10,30 @@ import regedit from 'regedit';
 let mainWindow: Electron.BrowserWindow | null;
 let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
 
+let isWordInstalled: boolean;
+let isExcelInstalled: boolean;
+let isPowerPointInstalled: boolean;
+let isLibreOfficeInstalledFlag: boolean;
+
+// binでなくexeを指定するとウィンドウが表示されるので注意
+let libreOfficePath: string | null;
+const libreOfficeDefaultPath = "C:\\Program Files\\LibreOffice\\program\\soffice.bin";  // 64-bit
+const libreOfficeDefaultPathAlt = "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.bin";  // 32-bit
+
 // TODO: ウィンドウサイズを変更できないようにする
 // TODO: メニューバーを非表示にする
 // TODO: 起動時に前のファイルが残っている場合は削除する
-const createWindow = () => {
+const createWindow = async () => {
+    // アプリケーションの起動時に一度だけMicrosoft OfficeやLibreOfficeのインストール確認
+    isWordInstalled = await isAppInstalled('winword');
+    isExcelInstalled = await isAppInstalled('excel');
+    isPowerPointInstalled = await isAppInstalled('powerpnt');
+    isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
+    console.log("Word installed:", isWordInstalled);
+    console.log("Excel installed:", isExcelInstalled);
+    console.log("PowerPoint installed:", isPowerPointInstalled);
+    console.log("LibreOffice installed:", isLibreOfficeInstalledFlag);
+  
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -52,32 +72,6 @@ const createWindow = () => {
   });
 };
 
-function isAppInstalled(appName: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    const appRegPath = [`HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${appName.toUpperCase()}.EXE`];
-
-      regedit.list(appRegPath, (err, result) => {
-          if (err) {
-              resolve(false);
-          } else {
-              resolve(true);
-          }
-      });
-  });
-}
-
-function isLibreOfficeInstalled(): Promise<boolean> {
-  return new Promise((resolve) => {
-    exec('soffice --version', (error, stdout) => {
-      if (error) {
-        resolve(false);
-      } else {
-        resolve(true);
-      }
-    });
-  });
-}
-
 app.on('ready', createWindow);
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -101,6 +95,63 @@ app.on('will-quit', () => {
   }
 });
 
+// Officeアプリケーションのインストール確認
+function isAppInstalled(appName: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const appRegPath = [`HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${appName.toUpperCase()}.EXE`];
+
+      regedit.list(appRegPath, (err, result) => {
+          if (err) {
+              resolve(false);
+          } else {
+              resolve(true);
+          }
+      });
+  });
+}
+
+// LibreOfficeのインストール確認
+function isLibreOfficeInstalled(): Promise<boolean> {
+  return new Promise((resolve) => {
+
+    exec(`"${libreOfficeDefaultPath}" --headless --version`, (error, stdout) => {
+      if (error) {
+        exec(`"${libreOfficeDefaultPathAlt}" --headless --version`, (error, stdout) => {
+          if (error) {
+            libreOfficePath = libreOfficeDefaultPathAlt;
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        });
+      } else {
+        libreOfficePath = libreOfficeDefaultPath;
+        resolve(true);
+      }
+    });
+  });
+}
+
+// LibreOfficeを使用して任意のファイルをPDFに変換する関数
+async function convertToPdfUsingLibreOffice(filePath: string, outputFilePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    exec(`"${libreOfficePath}" --headless --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
+      if (error) {
+        console.error("LibreOffice conversion error:", error);
+        reject(error);
+      } else {
+        const generatedPdfPath = path.join(path.dirname(outputFilePath), path.basename(filePath, path.extname(filePath)) + ".pdf");
+        fs.rename(generatedPdfPath, outputFilePath, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(outputFilePath);
+          }
+        });
+      }
+    });
+  });
+}
 
 // OSの一時フォルダを取得
 ipcMain.handle('get-os-tmpdir', () => {
@@ -122,11 +173,10 @@ ipcMain.handle('get-temp-files', async () => {
 
 // wordをpdfに変換
 ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
-  const isWordInstalled = await isAppInstalled('winword');
-  const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
   
-  if (isWordInstalled) {
-    return new Promise((resolve, reject) => {
+  // if (isWordInstalled) {
+    if (false) {
+      return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
       exec(command, (error: Error | null) => {
@@ -139,16 +189,8 @@ ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) =>
       });
     });
   } else if (isLibreOfficeInstalledFlag) {
-    return new Promise((resolve, reject) => {
-      exec(`soffice --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
-        if (error) {
-          console.error("LibreOffice conversion error:", error);
-          reject(error);
-        } else {
-          resolve(outputFilePath);
-        }
-      });
-    });
+    console.log("LibreOffice is installed, using it for conversion.");
+    return await convertToPdfUsingLibreOffice(filePath, outputFilePath);
   } else {
     // Neither Microsoft Word nor LibreOffice are installed
     throw new Error("No suitable application found for conversion.");
@@ -160,7 +202,8 @@ ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) =
   const isExcelInstalled = await isAppInstalled('excel');
   const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
   
-  if (isExcelInstalled) {
+  // if (isExcelInstalled) {
+    if (false) {
     return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
@@ -173,18 +216,9 @@ ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) =
       });
     });
   } else if (isLibreOfficeInstalledFlag) {
-    return new Promise((resolve, reject) => {
-      exec(`soffice --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
-        if (error) {
-          console.error("LibreOffice conversion error:", error);
-          reject(error);
-        } else {
-          resolve(outputFilePath);
-        }
-      });
-    });
+    return await convertToPdfUsingLibreOffice(filePath, outputFilePath);
   } else {
-    // Neither Microsoft Exccel nor LibreOffice are installed
+    // Neither Microsoft Word nor LibreOffice are installed
     throw new Error("No suitable application found for conversion.");
   }
 });
@@ -194,7 +228,8 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
   const isPowerPointInstalled = await isAppInstalled('powerpnt');
   const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
 
-  if (isPowerPointInstalled) {
+  if (false) {
+    // if (isPowerPointInstalled) {
     return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.SaveAs('${outputFilePath}', 32); $presentation.Close(); $powerpoint.Quit()"`;
@@ -207,18 +242,9 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
       });
     });
   } else if (isLibreOfficeInstalledFlag) {
-    return new Promise((resolve, reject) => {
-      exec(`soffice --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
-        if (error) {
-          console.error("LibreOffice conversion error:", error);
-          reject(error);
-        } else {
-          resolve(outputFilePath);
-        }
-      });
-    });
+    return await convertToPdfUsingLibreOffice(filePath, outputFilePath);
   } else {
-    // Neither Microsoft PowerPoint nor LibreOffice are installed
+    // Neither Microsoft Word nor LibreOffice are installed
     throw new Error("No suitable application found for conversion.");
   }
 });

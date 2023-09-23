@@ -118,9 +118,9 @@ function isLibreOfficeInstalled(): Promise<boolean> {
       if (error) {
         exec(`"${libreOfficeDefaultPathAlt}" --headless --version`, (error, stdout) => {
           if (error) {
-            libreOfficePath = libreOfficeDefaultPathAlt;
             resolve(false);
           } else {
+            libreOfficePath = libreOfficeDefaultPathAlt;
             resolve(true);
           }
         });

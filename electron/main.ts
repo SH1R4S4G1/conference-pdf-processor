@@ -21,8 +21,12 @@ let isLibreOfficeInstalledFlag: boolean;
 // let libreOfficePath: string | null;
 let libreOfficeInstallDir: string | null = null; // LibreOfficeのインストールフォルダ
 let libreOfficeFullExecPath: string | null = null;   // soffice.binのパス
-const libreOfficeDefaultDir = "C:\\Program Files\\LibreOffice";  // 64-bit
-const libreOfficeDefaultDirAlt = "C:\\Program Files (x86)\\LibreOffice";  // 32-bit
+const libreOfficeDefaultDir = process.platform === 'darwin' 
+  ? "/Applications/LibreOffice.app/Contents"
+  : "C:\\Program Files\\LibreOffice";  // 64-bit
+const libreOfficeDefaultDirAlt = process.platform === 'darwin'
+  ? "/Applications/LibreOffice.app/Contents"
+  : "C:\\Program Files (x86)\\LibreOffice";  // 32-bit
 const libreOfficeDefaultExecPath = "\\program\\soffice.bin";  // 64-bit
 
 // 設定ファイルの保存場所を指定
@@ -105,18 +109,31 @@ app.on('will-quit', () => {
 
 // Officeアプリケーションのインストール確認
 function isAppInstalled(appName: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    const appRegPath = [`HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${appName.toUpperCase()}.EXE`];
+  if (process.platform === 'darwin') {
+    return new Promise((resolve) => {
+      try {
+        const result = execSync(`mdfind "kMDItemCFBundleIdentifier == '${appName}'"`).toString();
+        resolve(result.trim() !== '');
+      } catch (error) {
+        console.error(`Error checking installation of ${appName} on MacOS:`, error);
+        resolve(false);
+      }
+    });
+  } else {
+    return new Promise((resolve) => {
+      const appRegPath = [`HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${appName.toUpperCase()}.EXE`];
 
-      regedit.list(appRegPath, (err, result) => {
-          if (err) {
-              resolve(false);
-          } else {
-              resolve(true);
-          }
+      regedit.list(appRegPath, (err) => {
+        if (err) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
       });
-  });
+    });
+  }
 }
+
 
 // LibreOfficeのインストール確認
 function isLibreOfficeInstalled(): Promise<boolean> {
@@ -147,6 +164,18 @@ function isLibreOfficeInstalled(): Promise<boolean> {
 // LibreOfficeを使用して任意のファイルをPDFに変換する関数
 async function convertToPdfUsingLibreOffice(filePath: string, outputFilePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (isLibreOfficeInstalledFlag) {
+      return new Promise((resolve, reject) => {
+          const libreOfficeCommand = `/Applications/LibreOffice.app/Contents/MacOS/soffice --convert-to pdf --outdir "${path.dirname(outputFilePath)}" "${filePath}"`;
+          exec(libreOfficeCommand, (error: Error | null) => {
+              if (error) {
+                  reject(error);
+              } else {
+                  resolve(outputFilePath);
+              }
+          });
+      });
+  } else {  
     exec(`"${libreOfficeFullExecPath}" --headless --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
       if (error) {
         console.error("LibreOffice conversion error:", error);
@@ -162,7 +191,7 @@ async function convertToPdfUsingLibreOffice(filePath: string, outputFilePath: st
         });
       }
     });
-  });
+  }});
 }
 
 // OSの一時フォルダを取得
@@ -187,6 +216,24 @@ ipcMain.handle('get-temp-files', async () => {
 ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
   
   if (isWordInstalled) {
+    if (process.platform === 'darwin') {
+      return new Promise((resolve, reject) => {
+          const appleScriptCommand = `
+              tell application "Microsoft Word"
+                  set theDoc to open "${filePath}"
+                  save as theDoc file name "${outputFilePath}" file format format PDF
+                  close theDoc
+              end tell
+          `;
+          exec(`osascript -e '${appleScriptCommand}'`, (error: Error | null) => {
+              if (error) {
+                  reject(error);
+              } else {
+                  resolve(outputFilePath);
+              }
+          });
+      });
+    } else {
       return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
@@ -198,7 +245,7 @@ ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) =>
           resolve(outputFilePath);
         }
       });
-    });
+    });}
   } else if (isLibreOfficeInstalledFlag) {
     console.log("LibreOffice is installed, using it for conversion.");
     return await convertToPdfUsingLibreOffice(filePath, outputFilePath);
@@ -214,6 +261,24 @@ ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) =
   const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
   
   if (isExcelInstalled) {
+    if (process.platform === 'darwin') {
+      return new Promise((resolve, reject) => {
+          const appleScriptCommand = `
+              tell application "Microsoft PowerPoint"
+                  set thePresentation to open "${filePath}"
+                  save as thePresentation file name "${outputFilePath}" file format PDF format
+                  close thePresentation
+              end tell
+          `;
+          exec(`osascript -e '${appleScriptCommand}'`, (error: Error | null) => {
+              if (error) {
+                  reject(error);
+              } else {
+                  resolve(outputFilePath);
+              }
+          });
+      });
+  } else {  
     return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
@@ -224,7 +289,7 @@ ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) =
           resolve(outputFilePath);
         }
       });
-    });
+    });}
   } else if (isLibreOfficeInstalledFlag) {
     return await convertToPdfUsingLibreOffice(filePath, outputFilePath);
   } else {
@@ -240,6 +305,24 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
 
   if (isPowerPointInstalled) {
     return new Promise((resolve, reject) => {
+      if (process.platform === 'darwin') {
+        return new Promise((resolve, reject) => {
+            const appleScriptCommand = `
+                tell application "Microsoft PowerPoint"
+                    set thePresentation to open "${filePath}"
+                    save as thePresentation file name "${outputFilePath}" file format PDF format
+                    close thePresentation
+                end tell
+            `;
+            exec(`osascript -e '${appleScriptCommand}'`, (error: Error | null) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(outputFilePath);
+                }
+            });
+        });
+    } else {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.SaveAs('${outputFilePath}', 32); $presentation.Close(); $powerpoint.Quit()"`;
       exec(command, (error: Error | null) => {
@@ -249,7 +332,7 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
           resolve(outputFilePath);
         }
       });
-    });
+    }});
   } else if (isLibreOfficeInstalledFlag) {
     return await convertToPdfUsingLibreOffice(filePath, outputFilePath);
   } else {

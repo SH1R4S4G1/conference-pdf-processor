@@ -1,7 +1,7 @@
 // main.ts
 import { app, BrowserWindow,dialog,ipcMain,shell,Dialog } from 'electron';
 import { exec, execSync } from 'child_process';
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts, PDFName, PDFNumber, PDFDict, PDFRef, PDFString, PDFHexString } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -396,11 +396,12 @@ ipcMain.handle('create-content-list', async (event, fileInfos: Array<{ name: str
       yOffset -= 25;  // Y座標を下に移動
   }
 
+  // ファイルの保存
   const contentListPdfBytes = await pdfDoc.save();
   const tempDir = appTempDir;
   const outputPath = path.join(tempDir, `content-list-${Date.now()}.pdf`);
   fs.writeFileSync(outputPath, contentListPdfBytes);
-
+  
   return outputPath;
 });
 
@@ -433,4 +434,101 @@ ipcMain.handle('set-libreoffice-path', (event, newPath) => {
   libreOfficeFullExecPath = newPath;
   return true;
 });
+
+ipcMain.handle('create-outline', async (event, { pdfPath, outlines,indexPages }) => {
+  const existingPdfBytes = fs.readFileSync(pdfPath);
+  const pdfDoc = await PDFDocument.load(existingPdfBytes);
+  await createOutlines(pdfDoc, outlines, indexPages);
+  const pdfBytes = await pdfDoc.save();
+
+  console.log("create-outline:", pdfDoc)
+
+  fs.writeFileSync(pdfPath, pdfBytes);
+  return pdfPath;
+});
+
+// アウトラインを追加する関数
+async function createOutlines(doc: PDFDocument, outlines: Array<{ title: string, page: number }>, indexPages: number) {
+  const pages = doc.getPages();
+  console.log("Total pages in doc:", pages.length);
+  console.log("Outlines:", JSON.stringify(outlines, null, 2));
+
+  const pageRefs = outlines.map(({ page }) => {
+    const adjustedPage = page + indexPages - 1;  // 資料一覧のページ数を加算
+    if (!pages[adjustedPage]) {
+      console.error(`Invalid page number: ${adjustedPage}`);
+    }
+    return pages[adjustedPage].ref;
+  });  
+
+  const outlineRefs: PDFRef[] = [];
+
+  // Creating individual outline items
+  for (let i = 0; i < outlines.length; i++) {
+      const { title, page } = outlines[i];
+
+      const decodedTitle = decodeTitle(title);
+      console.log(`Original Title: ${title}`);
+      console.log(`Decoded Title: ${decodedTitle}`);
+      const outlineRef = doc.context.nextRef();
+      const outlineItem = createOutlineItem(doc, decodedTitle, null, null, pageRefs[i]);
+
+      doc.context.assign(outlineRef, outlineItem);
+      outlineRefs.push(outlineRef);
+  }
+
+  // Linking the outlines together
+  for (let i = 0; i < outlineRefs.length - 1; i++) {
+      const currentOutline = doc.context.lookup(outlineRefs[i], PDFDict);
+      currentOutline.set(PDFName.of("Next"), outlineRefs[i + 1]);
+  }
+
+  for (let i = 1; i < outlineRefs.length; i++) {
+      const currentOutline = doc.context.lookup(outlineRefs[i], PDFDict);
+      currentOutline.set(PDFName.of("Prev"), outlineRefs[i - 1]);
+  }
+
+  const outlinesDictRef = doc.context.nextRef();
+  const outlinesDictMap = new Map();
+  outlinesDictMap.set(PDFName.Type, PDFName.of("Outlines"));
+  outlinesDictMap.set(PDFName.of("First"), outlineRefs[0]);
+  outlinesDictMap.set(PDFName.of("Last"), outlineRefs[outlineRefs.length - 1]);
+  outlinesDictMap.set(PDFName.of("Count"), PDFNumber.of(outlines.length));
+
+  const outlinesDict = PDFDict.fromMapWithContext(outlinesDictMap, doc.context);
+  doc.catalog.set(PDFName.of("Outlines"), outlinesDictRef);
+  doc.context.assign(outlinesDictRef, outlinesDict);
+}
+
+function createOutlineItem(doc: PDFDocument, title: string, parentRef: PDFRef | null, nextRef: PDFRef | null, pageRef: PDFRef) {
+  const dict = new Map();
+
+  // UTF-16BE でエンコードされた Uint8Array を取得
+  const utf16Bytes = toUTF16BE(title);
+
+  // この Uint8Array を直接 PDFHexString として使用
+  const encodedTitle = PDFHexString.fromText(title);
+
+  dict.set(PDFName.of("Title"), encodedTitle);
+
+  if (parentRef) dict.set(PDFName.of("Parent"), parentRef);
+  if (nextRef) dict.set(PDFName.of("Next"), nextRef);
+  dict.set(PDFName.of("Dest"), doc.context.obj([pageRef, PDFName.of("XYZ"), null, null, null]));
+
+  return PDFDict.fromMapWithContext(dict, doc.context);
+}
+
+
+function decodeTitle(encodedTitle: string): string {
+  return decodeURIComponent(encodedTitle);
+}
+
+function toUTF16BE(str: string): Uint8Array {
+  const utf16 = new TextEncoder().encode(str);
+  const uint8Arr = new Uint8Array(utf16.length + 2);
+  uint8Arr[0] = 0xFE;
+  uint8Arr[1] = 0xFF;
+  uint8Arr.set(utf16, 2);
+  return uint8Arr;
+}
 

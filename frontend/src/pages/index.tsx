@@ -229,6 +229,7 @@
       try {    
         setStatus(AppStatus.PROCESSING);
         let contentListPdfPath;  // 資料一覧のPDFファイルのパス
+        let contentListPageCount;  // 資料一覧のページ数
 
         // ファイルの統合時に選択されていないパターンを除外
         const validPatterns = patterns.filter(pattern => pattern.selectedFiles.length > 0);
@@ -237,6 +238,7 @@
           // ここでselectedFilesの内容を参照して処理対象のファイルを絞り込む
           const filesToProcess = uploadedFiles.filter(file => pattern.selectedFiles.includes(file.tempPath));
 
+          // 処理対象のファイルのページ数を計算
           let currentPage = 1;  // 現在のページ番号を追跡するための変数
           const filesWithStartPages = filesToProcess.map(file => {
             const startPage = currentPage;
@@ -251,6 +253,7 @@
 
           // 資料一覧のPDFファイルを作成
           if (pattern.createContentList) {
+            // contentListData配列を生成
             const contentListData = filesWithStartPages.map(file => ({
                 name: file.originalName,
                 pageCount: file.pageCount,
@@ -263,6 +266,9 @@
                 const newContentListPdfPath = await window.electron.invoke('add-blank-page', contentListPdfPath);
                 contentListPdfPath = newContentListPdfPath;
             }
+
+            // 資料一覧のページ数を取得（アウトライン用）
+            contentListPageCount = pattern.createContentList ? await window.electron.invoke('get-pdf-page-count', contentListPdfPath) : 0;
           }
 
           // 処理対象のファイルの白紙差込み
@@ -283,6 +289,28 @@
                 files: [contentListPdfPath, tempFilePath],
                 addPageNumbers: false
             });
+
+            console.log("アウトライン処理")
+            if (pattern.createContentList) {
+              // outlines配列を生成
+              console.log("アウトライン処理開始")
+              const outlines = filesWithStartPages.map(file => ({
+                title: file.originalName,
+                page: file.startPage
+              })); 
+              console.log("アウトラインの配列 :",outlines)
+
+              // アウトラインを追加
+              console.log("メインプロセスへ")
+              await window.electron.invoke('create-outline', {
+                pdfPath: finalPdfPath,
+                outlines: outlines,
+                indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
+              });
+              
+            console.log("メインプロセスから")
+          }
+
             await window.electron.invoke('open-file', finalPdfPath);  // 合成したPDFを開く
           } else {
             await window.electron.invoke('open-file', tempFilePath);  // 合成したPDFを開く
@@ -397,21 +425,10 @@
         setShowError(false);
       }, 3000);
     };    
-        
-    // const handleFileEnterPress = (e: React.KeyboardEvent, id: string) => {
-    //   if (e.key === 'Enter') {
-    //     setEditingFileId(null);  // 編集モードをオフ
-    //   }
-    // };    
-    
+            
     // TODO: 微妙に右側にはみ出している？
-    // TODO: ページ数を付与しないを選んだら同時にファイル一覧作成及びファイル一覧への白紙差し込みを選択解除する
-    // TODO: ファイル一覧作成を解除したらファイル一覧への白紙差し込みを選択解除する
-    // TODO: パターン名を変更できるようにする。パターン名の重複を避ける
     // TODO: パターンの順番を変更できるようにする
     // TODO: テーブルが表示されていない間だけ、見かけのドロップエリアを広げる
-    // TODO: テーブルの幅が固定長になるようにする
-    // TODO: ひとつもファイルが選択されていないパターンは処理の対象外にする
     return (
       <div 
       className="p-5 h-screen w-screen"

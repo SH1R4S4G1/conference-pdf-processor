@@ -30,6 +30,12 @@
     pageCount: number;
   };
 
+  type ContentListEntry = {
+    name: string;
+    startPage: number;
+    pageCount: number;
+  };
+
   export default function Home() {
     // 生のファイル一覧
     const [fileList, setFileList] = useState<string[]>([]);
@@ -230,6 +236,7 @@
         setStatus(AppStatus.PROCESSING);
         let contentListPdfPath;  // 資料一覧のPDFファイルのパス
         let contentListPageCount;  // 資料一覧のページ数
+        let contentListData: ContentListEntry[] = []; // この変数を関数の最初に追加
 
         // ファイルの統合時に選択されていないパターンを除外
         const validPatterns = patterns.filter(pattern => pattern.selectedFiles.length > 0);
@@ -254,7 +261,7 @@
           // 資料一覧のPDFファイルを作成
           if (pattern.createContentList) {
             // contentListData配列を生成
-            const contentListData = filesWithStartPages.map(file => ({
+            contentListData = filesWithStartPages.map(file => ({
                 name: file.originalName,
                 pageCount: file.pageCount,
                 startPage: file.startPage  // 開始ページの情報を追加
@@ -290,26 +297,29 @@
                 addPageNumbers: false
             });
 
-            console.log("アウトライン処理")
             if (pattern.createContentList) {
               // outlines配列を生成
-              console.log("アウトライン処理開始")
               const outlines = filesWithStartPages.map(file => ({
                 title: file.originalName,
                 page: file.startPage
               })); 
-              console.log("アウトラインの配列 :",outlines)
 
               // アウトラインを追加
-              console.log("メインプロセスへ")
               await window.electron.invoke('create-outline', {
                 pdfPath: finalPdfPath,
                 outlines: outlines,
                 indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
               });
-              
-            console.log("メインプロセスから")
-          }
+            }
+
+            // ファイル一覧を作成する場合、アウトラインと同時にリンクを作成する
+            if (pattern.createContentList) {
+              await window.electron.invoke('add-links-to-content-list', {
+                pdfPath: finalPdfPath,
+                contentData: contentListData,
+                indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
+              });
+            }
 
             await window.electron.invoke('open-file', finalPdfPath);  // 合成したPDFを開く
           } else {

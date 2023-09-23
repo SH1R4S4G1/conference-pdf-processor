@@ -1,7 +1,7 @@
 // main.ts
 import { app, BrowserWindow,dialog,ipcMain,shell,Dialog } from 'electron';
 import { exec, execSync } from 'child_process';
-import { degrees, PDFDocument, rgb, StandardFonts, PDFName, PDFNumber, PDFDict, PDFRef, PDFString, PDFHexString } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts, PDFName, PDFNumber, PDFDict, PDFRef, PDFString, PDFHexString, PDFPage, PDFAnnotation, PDFArray } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -382,19 +382,21 @@ ipcMain.handle('create-content-list', async (event, fileInfos: Array<{ name: str
 
   const page = pdfDoc.addPage([600, 800]);  // 適切なサイズに調整してください
 
-  let yOffset = 750;  // Y座標のオフセット（初期値）
+  //TODO: ファイル名の表示についてリンクかこちらのテキストか判断
+  // let yOffset = 750;  // Y座標のオフセット（初期値）
 
-  for (const fileInfo of fileInfos) {
-      const text = `${fileInfo.name} - 開始ページ: ${fileInfo.startPage}`;
-      page.drawText(text, {
-          x: 50,
-          y: yOffset,
-          size: 20,
-          font: font,
-          color: rgb(0, 0, 0),
-      });
-      yOffset -= 25;  // Y座標を下に移動
-  }
+  // for (const fileInfo of fileInfos) {
+  //     const text = `${fileInfo.name} - 開始ページ: ${fileInfo.startPage}`;
+  //     page.drawText(text, {
+  //         x: 50,
+  //         y: yOffset,
+  //         size: 20,
+  //         font: font,
+  //         color: rgb(0, 0, 0),
+  //     });
+
+  //     yOffset -= 25;  // Y座標を下に移動
+  // }
 
   // ファイルの保存
   const contentListPdfBytes = await pdfDoc.save();
@@ -468,8 +470,6 @@ async function createOutlines(doc: PDFDocument, outlines: Array<{ title: string,
       const { title, page } = outlines[i];
 
       const decodedTitle = decodeTitle(title);
-      console.log(`Original Title: ${title}`);
-      console.log(`Decoded Title: ${decodedTitle}`);
       const outlineRef = doc.context.nextRef();
       const outlineItem = createOutlineItem(doc, decodedTitle, null, null, pageRefs[i]);
 
@@ -503,9 +503,6 @@ async function createOutlines(doc: PDFDocument, outlines: Array<{ title: string,
 function createOutlineItem(doc: PDFDocument, title: string, parentRef: PDFRef | null, nextRef: PDFRef | null, pageRef: PDFRef) {
   const dict = new Map();
 
-  // UTF-16BE でエンコードされた Uint8Array を取得
-  const utf16Bytes = toUTF16BE(title);
-
   // この Uint8Array を直接 PDFHexString として使用
   const encodedTitle = PDFHexString.fromText(title);
 
@@ -523,12 +520,72 @@ function decodeTitle(encodedTitle: string): string {
   return decodeURIComponent(encodedTitle);
 }
 
-function toUTF16BE(str: string): Uint8Array {
-  const utf16 = new TextEncoder().encode(str);
-  const uint8Arr = new Uint8Array(utf16.length + 2);
-  uint8Arr[0] = 0xFE;
-  uint8Arr[1] = 0xFF;
-  uint8Arr.set(utf16, 2);
-  return uint8Arr;
-}
+ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData , indexPages }) => {
+  const pdfBytes = fs.readFileSync(pdfPath);
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+
+  const page = pdfDoc.getPages()[0];
+  let yOffset = 750; 
+  const linkHeight = 25;
+
+  for (const entry of contentData) {
+    const linkRect = {
+      x: 50,
+      y: yOffset - linkHeight,
+      width: 500,
+      height: linkHeight
+    };
+
+    // TODO:枠はいらない？
+    // page.drawRectangle({
+    //   ...linkRect,
+    //   borderColor: rgb(0, 0, 0),
+    //   borderWidth: 1,
+    //   opacity: 0
+    // });    
+
+    // 外部フォントを読み込む
+    pdfDoc.registerFontkit(fontkit);
+    const fontBytes = fs.readFileSync(path.join(__dirname, '..\\..\\electron\\assets\\fonts\\ipaexm.ttf'));
+    const font = await pdfDoc.embedFont(fontBytes);  
+
+    const text = `${entry.name} ───── ${entry.startPage}ページ`;
+    page.drawText(text, {
+      x: linkRect.x,
+      y: linkRect.y,
+      size: 20,
+      font: font,
+      color: rgb(0, 0, 1)
+    });
+
+    // Create link annotation
+    const linkAnnot = createPageLinkAnnotation(pdfDoc, pdfDoc.getPages()[entry.startPage + indexPages - 1].ref, linkRect); // ここで indexPages を加算
+    
+    // 既存のアノテーションを取得または新しい配列を作成
+    const annotations = page.node.lookup(PDFName.of('Annots'), PDFArray) || pdfDoc.context.obj([]);
+    annotations.push(linkAnnot);
+    page.node.set(PDFName.of('Annots'), annotations);
+
+    yOffset -= linkHeight;
+
+  }
+
+  const savedPdfBytes = await pdfDoc.save();
+  fs.writeFileSync(pdfPath, savedPdfBytes);
+  return pdfPath;
+});
+
+const createPageLinkAnnotation = (pdfDoc: PDFDocument, pageRef: PDFRef, linkRect: { x: number, y: number, width: number, height: number }) => {
+  return pdfDoc.context.register(
+    pdfDoc.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [linkRect.x, linkRect.y, linkRect.x + linkRect.width, linkRect.y + linkRect.height], // 位置を動的に設定
+      Border: [0, 0, 2],
+      C: [0, 0, 1],
+      Dest: [pageRef, 'XYZ', null, null, null],
+    })
+  );
+};
+
 

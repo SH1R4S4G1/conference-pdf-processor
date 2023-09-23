@@ -18,9 +18,12 @@ let isPowerPointInstalled: boolean;
 let isLibreOfficeInstalledFlag: boolean;
 
 // binでなくexeを指定するとウィンドウが表示されるので注意
-let libreOfficePath: string | null;
-const libreOfficeDefaultPath = "C:\\Program Files\\LibreOffice\\program\\soffice.bin";  // 64-bit
-const libreOfficeDefaultPathAlt = "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.bin";  // 32-bit
+// let libreOfficePath: string | null;
+let libreOfficeInstallDir: string | null = null; // LibreOfficeのインストールフォルダ
+let libreOfficeFullExecPath: string | null = null;   // soffice.binのパス
+const libreOfficeDefaultDir = "C:\\Program Files\\LibreOffice";  // 64-bit
+const libreOfficeDefaultDirAlt = "C:\\Program Files (x86)\\LibreOffice";  // 32-bit
+const libreOfficeDefaultExecPath = "\\program\\soffice.bin";  // 64-bit
 
 // 設定ファイルの保存場所を指定
 const store = new Store();
@@ -118,19 +121,23 @@ function isAppInstalled(appName: string): Promise<boolean> {
 // LibreOfficeのインストール確認
 function isLibreOfficeInstalled(): Promise<boolean> {
   return new Promise((resolve) => {
+    const libreOfficeDefaultFullExecPath = path.join(libreOfficeDefaultDir, libreOfficeDefaultExecPath);
+    const libreOfficeDefaultFullExecPathAlt = path.join(libreOfficeDefaultDirAlt, libreOfficeDefaultExecPath);
 
-    exec(`"${libreOfficeDefaultPath}" --headless --version`, (error, stdout) => {
+    exec(`"${libreOfficeDefaultFullExecPath}" --headless --version`, (error, stdout) => {
       if (error) {
-        exec(`"${libreOfficeDefaultPathAlt}" --headless --version`, (error, stdout) => {
+        exec(`"${libreOfficeDefaultFullExecPathAlt}" --headless --version`, (error, stdout) => {
           if (error) {
             resolve(false);
           } else {
-            libreOfficePath = libreOfficeDefaultPathAlt;
+            libreOfficeInstallDir = libreOfficeDefaultDirAlt;
+            libreOfficeFullExecPath = libreOfficeDefaultFullExecPathAlt;
             resolve(true);
           }
         });
       } else {
-        libreOfficePath = libreOfficeDefaultPath;
+        libreOfficeInstallDir = libreOfficeDefaultDir;
+        libreOfficeFullExecPath = libreOfficeDefaultFullExecPath;
         resolve(true);
       }
     });
@@ -140,7 +147,7 @@ function isLibreOfficeInstalled(): Promise<boolean> {
 // LibreOfficeを使用して任意のファイルをPDFに変換する関数
 async function convertToPdfUsingLibreOffice(filePath: string, outputFilePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    exec(`"${libreOfficePath}" --headless --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
+    exec(`"${libreOfficeFullExecPath}" --headless --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
       if (error) {
         console.error("LibreOffice conversion error:", error);
         reject(error);
@@ -398,7 +405,7 @@ ipcMain.handle('create-content-list', async (event, fileInfos: Array<{ name: str
 });
 
 ipcMain.handle('select-libreoffice-path', async (event) => {
-  const defaultDirectory = libreOfficePath || os.homedir();
+  const defaultDirectory = libreOfficeInstallDir || os.homedir();
 
   const folders = dialog.showOpenDialogSync({
     properties: ['openDirectory'],
@@ -419,11 +426,11 @@ ipcMain.handle('select-libreoffice-path', async (event) => {
 });
 
 ipcMain.handle('get-libreoffice-path', (event) => {
-  return libreOfficePath;
+  return libreOfficeFullExecPath;
 });
 
 ipcMain.handle('set-libreoffice-path', (event, newPath) => {
-  libreOfficePath = newPath;
+  libreOfficeFullExecPath = newPath;
   return true;
 });
 

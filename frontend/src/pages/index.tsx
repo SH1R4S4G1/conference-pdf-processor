@@ -2,7 +2,7 @@
   // 処理の際には、フルパスを使用する。必要に応じて「path.basename()」を使用してファイル名のみを取得する。
 
   import React, { useState, useRef, useEffect } from 'react';
-  import { FaRegTrashAlt, FaFileUpload } from 'react-icons/fa';
+  import { FaRegTrashAlt, FaFileUpload,FaCog } from 'react-icons/fa';
   import FileRowWithControls from './../components/FileRowWithControls';
   import CharacterComponent from './../components/CharacterComponent';
   import { AppStatus } from './../types/types';
@@ -57,20 +57,36 @@
     const [editingPatternId, setEditingPatternId] = useState<number | null>(null);
     const patternInputRef = useRef<HTMLInputElement | null>(null);
 
+    // 設定画面関係
+    const [showSettings, setShowSettings] = useState(false);
+    const [currentLibreOfficePath, setCurrentLibreOfficePath] = useState<string | null>(null);
+
+    // エラーメッセージ
+    const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('')
+
     // DEV:ファイルリストの変更を監視
     useEffect(() => {
       console.log('fileList has changed:', fileList);
     }, [fileList]);
     
-    // DEV:ページ数が奇数のファイルの変更を監視
+    useEffect(() => {
+    }, []);
+     // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
+
+     // DEV:ページ数が奇数のファイルの変更を監視
     useEffect(() => {
       console.log('oddPageFiles has changed:', oddPageFiles);
-    }, [oddPageFiles]);  
+    }, [oddPageFiles]); 
 
     useEffect(() => {
-      // fetchFiles();
-    }, []); // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
-
+      window.electron.invoke('get-libreoffice-path').then(path => {
+        setCurrentLibreOfficePath(path);
+      }).catch(error => {
+        console.error("Error fetching LibreOffice path:", error);
+      });
+    }, [showSettings]);
+    
     useEffect(() => {
       if (fileList.length > 0 && patterns.length === 0) {
         addPattern();  // 処理前のファイルリストが表示されたとき、最初のパターンを自動で作成する
@@ -201,7 +217,8 @@
           setStatus(AppStatus.COMPLETED);
         } else {
           setStatus(AppStatus.ERROR);
-          alert(`${file.name} is not a supported file type.`);
+          displayError(`${file.name}はサポートされていないファイル形式です。`);
+          // alert(`${file.name} is not a supported file type.`);
         }
         
       }
@@ -274,6 +291,7 @@
         setStatus(AppStatus.COMPLETED);
       } catch (error) {
         console.error("Error combining PDFs:", error);
+        displayError("PDFの統合に失敗しました。");
         setStatus(AppStatus.ERROR);
       }
     };
@@ -356,6 +374,29 @@
         setEditingPatternId(null);  // 編集モードをオフ
       }
     };
+
+    const handlePathChange = () => {
+      // ダイアログを表示してLibreOfficeのインストールフォルダを選択
+      window.electron.invoke('select-libreoffice-path').then(selectedPath => {
+        if (selectedPath) {
+          console.log("Selected LibreOffice path:", selectedPath);
+          setCurrentLibreOfficePath(selectedPath); // 状態を更新してUIをリフレッシュする
+        }
+      }).catch(error => {
+        console.error("Error selecting LibreOffice path:", error);
+        displayError("LibreOfficeが見つかりません");
+      });
+    }
+    
+    const displayError = (message: string) => {
+      setErrorMessage(message);
+      setShowError(true);
+    
+      // 3秒後にエラーを非表示にする
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+    };    
         
     // const handleFileEnterPress = (e: React.KeyboardEvent, id: string) => {
     //   if (e.key === 'Enter') {
@@ -668,6 +709,26 @@
           </button>
           )}
 
+        <FaCog onClick={() => setShowSettings(true)} />
+
+        {showSettings && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-5 bg-gray-200 border border-gray-300 z-50">
+            <button onClick={handlePathChange} className="p-2 bg-blue-500 text-white rounded">
+              LibreOfficeのインストールフォルダを選択
+            </button>
+            <div>
+              <p>現在設定されているLibreOfficeのパス:</p>
+              <p>{currentLibreOfficePath || 'LibreOfficeの実行ファイルが見つかりません。'}</p>
+            </div>
+            <button onClick={() => setShowSettings(false)} className="ml-2 p-2 bg-red-500 text-white rounded">
+              閉じる
+            </button>
+          </div>
+        )}
+
+        <div className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-red-600 text-white rounded-t ${showError ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-300`}>
+          {errorMessage}
+        </div>
 
         <div className="fixed bottom-2.5 right-2.5">
           <CharacterComponent status={status} />

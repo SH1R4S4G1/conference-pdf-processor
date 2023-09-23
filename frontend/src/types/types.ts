@@ -5,3 +5,5 @@ export enum AppStatus {
     COMPLETED, // 処理完了
     ERROR // エラー発生
   }  
+
+  

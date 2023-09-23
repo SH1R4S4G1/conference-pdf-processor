@@ -1,11 +1,13 @@
 // main.ts
-import { app, BrowserWindow,ipcMain,shell } from 'electron';
+import { app, BrowserWindow,dialog,ipcMain,shell,Dialog } from 'electron';
 import { exec, execSync } from 'child_process';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import regedit from 'regedit';
+import Store from 'electron-store';
 
 let mainWindow: Electron.BrowserWindow | null;
 let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
@@ -19,6 +21,9 @@ let isLibreOfficeInstalledFlag: boolean;
 let libreOfficePath: string | null;
 const libreOfficeDefaultPath = "C:\\Program Files\\LibreOffice\\program\\soffice.bin";  // 64-bit
 const libreOfficeDefaultPathAlt = "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.bin";  // 32-bit
+
+// 設定ファイルの保存場所を指定
+const store = new Store();
 
 // TODO: ウィンドウサイズを変更できないようにする
 // TODO: メニューバーを非表示にする
@@ -174,8 +179,7 @@ ipcMain.handle('get-temp-files', async () => {
 // wordをpdfに変換
 ipcMain.handle('convert-word-to-pdf', async (event, filePath, outputFilePath) => {
   
-  // if (isWordInstalled) {
-    if (false) {
+  if (isWordInstalled) {
       return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$word = New-Object -ComObject Word.Application; $word.Visible = $false; $document = $word.Documents.Open('${filePath}'); $document.SaveAs('${outputFilePath}', 17); $document.Close(); $word.Quit()"`;
@@ -202,8 +206,7 @@ ipcMain.handle('convert-excel-to-pdf', async (event, filePath, outputFilePath) =
   const isExcelInstalled = await isAppInstalled('excel');
   const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
   
-  // if (isExcelInstalled) {
-    if (false) {
+  if (isExcelInstalled) {
     return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$excel = New-Object -ComObject Excel.Application; $excel.Visible = $false; $workbook = $excel.Workbooks.Open('${filePath}'); $workbook.ExportAsFixedFormat(0, '${outputFilePath}'); $workbook.Close(); $excel.Quit()"`;
@@ -228,8 +231,7 @@ ipcMain.handle('convert-ppt-to-pdf', async (event, filePath, outputFilePath) => 
   const isPowerPointInstalled = await isAppInstalled('powerpnt');
   const isLibreOfficeInstalledFlag = await isLibreOfficeInstalled();
 
-  if (false) {
-    // if (isPowerPointInstalled) {
+  if (isPowerPointInstalled) {
     return new Promise((resolve, reject) => {
       console.log("outputFilePath:", outputFilePath, "filePath:", filePath);
       const command = `powershell -command "$powerpoint = New-Object -ComObject PowerPoint.Application; $presentation = $powerpoint.Presentations.Open('${filePath}'); $presentation.SaveAs('${outputFilePath}', 32); $presentation.Close(); $powerpoint.Quit()"`;
@@ -394,3 +396,34 @@ ipcMain.handle('create-content-list', async (event, fileInfos: Array<{ name: str
 
   return outputPath;
 });
+
+ipcMain.handle('select-libreoffice-path', async (event) => {
+  const defaultDirectory = libreOfficePath || os.homedir();
+
+  const folders = dialog.showOpenDialogSync({
+    properties: ['openDirectory'],
+    title: 'LibreOfficeのインストールフォルダを選択',
+    defaultPath: defaultDirectory,
+  });
+
+  if (folders && folders.length > 0) {
+    const selectedPath = folders[0];
+    const sofficePath = path.join(selectedPath, 'program', 'soffice.bin');
+
+    if (fs.existsSync(sofficePath)) {
+      store.set('libreofficePath', sofficePath);
+      return sofficePath;
+    }
+  }
+  throw new Error('LibreOffice installation not found at the selected path.');
+});
+
+ipcMain.handle('get-libreoffice-path', (event) => {
+  return libreOfficePath;
+});
+
+ipcMain.handle('set-libreoffice-path', (event, newPath) => {
+  libreOfficePath = newPath;
+  return true;
+});
+

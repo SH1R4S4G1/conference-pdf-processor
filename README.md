@@ -90,6 +90,8 @@
 
 このプロジェクトは以下の主要な技術スタックに依存しています：
 
+- *PDF-LIB* (https://pdf-lib.js.org/, https://github.com/Hopding/pdf-lib.git)
+- Node.js
 - TypeScript
 - Electron
 - Next.js

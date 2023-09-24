@@ -1,6 +1,6 @@
 {
   "name": "conference-pdf-processor",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A PDF processor for conferences.",
   "main": "./build_electron/electron/main.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "dist": "electron-builder"
   },
   "build": {
-    "appId": "com.yourcompany.yourAppId",
+    "appId": "net.smart9b.conference-pdf-processor",
     "files": [
       "build_electron/**/*",
       "electron/**/*",

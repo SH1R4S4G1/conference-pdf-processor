@@ -169,13 +169,13 @@
     // ドラッグ＆ドロップでファイルを投入したときの処理
     const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      setStatus(AppStatus.PROCESSING);
     
       // ドロップされたファイルを取得
       const files = event.dataTransfer.files;
       console.log("投入されたファイル", files);
     
       for (let i = 0; i < files.length; i++) {
+        setStatus(AppStatus.PROCESSING);
         const file = files[i];
         const fileExt = file.name.split('.').pop()?.toLowerCase();
     
@@ -226,7 +226,6 @@
           displayError(`${file.name}はサポートされていないファイル形式です。`);
           // alert(`${file.name} is not a supported file type.`);
         }
-        
       }
     };
 

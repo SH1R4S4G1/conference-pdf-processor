@@ -189,7 +189,7 @@
           console.log("Temp Directory:", tempDir);
 
           const uniqueFilename = Date.now() + ".pdf"; // 一時保存ディレクトリに保存するファイルの名前
-          const outputFilePath = path.join(tempDir, uniqueFilename).replace(/\//g, '\\'); // 一時保存ディレクトリに保存するファイルのパス
+          const outputFilePath = path.join(tempDir, uniqueFilename); // 一時保存ディレクトリに保存するファイルのパス
 
           console.log(fileExt, file.type, file.path, outputFilePath);
           

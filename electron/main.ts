@@ -10,7 +10,8 @@ import regedit from 'regedit';
 import Store from 'electron-store';
 
 let mainWindow: Electron.BrowserWindow | null;
-let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
+// let appTempDir = path.join(app.getPath('temp'), 'conference-pdf-processor');
+let appTempDir = path.join(os.tmpdir(), 'conference-pdf-processor');
 
 let isWordInstalled: boolean;
 let isExcelInstalled: boolean;
@@ -22,13 +23,15 @@ let isLibreOfficeInstalledFlag: boolean;
 let libreOfficeInstallDir: string | null = null; // LibreOfficeのインストールフォルダ
 let libreOfficeFullExecPath: string | null = null;   // soffice.binのパス
 const libreOfficeDefaultDir = process.platform === 'darwin' 
-  ? "/Applications/LibreOffice.app/Contents"
+  ? "/Applications/LibreOffice.app"
   : "C:\\Program Files\\LibreOffice";  // 64-bit
 const libreOfficeDefaultDirAlt = process.platform === 'darwin'
-  ? "/Applications/LibreOffice.app/Contents"
+  ? "/Applications/LibreOffice.app"
   : "C:\\Program Files (x86)\\LibreOffice";  // 32-bit
-const libreOfficeDefaultExecPath = "\\program\\soffice.bin";  // 64-bit
-
+  const libreOfficeDefaultExecPath = process.platform === 'darwin'
+  ? "/Contents/MacOS/soffice"
+  : "\\program\\soffice.bin";  // 64-bit
+  
 // 設定ファイルの保存場所を指定
 const store = new Store();
 
@@ -161,38 +164,48 @@ function isLibreOfficeInstalled(): Promise<boolean> {
   });
 }
 
-// LibreOfficeを使用して任意のファイルをPDFに変換する関数
 async function convertToPdfUsingLibreOffice(filePath: string, outputFilePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (isLibreOfficeInstalledFlag) {
-      return new Promise((resolve, reject) => {
-          const libreOfficeCommand = `/Applications/LibreOffice.app/Contents/MacOS/soffice --convert-to pdf --outdir "${path.dirname(outputFilePath)}" "${filePath}"`;
-          exec(libreOfficeCommand, (error: Error | null) => {
-              if (error) {
-                  reject(error);
-              } else {
-                  resolve(outputFilePath);
-              }
-          });
-      });
-  } else {  
-    exec(`"${libreOfficeFullExecPath}" --headless --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`, (error) => {
-      if (error) {
-        console.error("LibreOffice conversion error:", error);
-        reject(error);
+      console.log("convertToPdfUsingLibreOffice called with filePath:", filePath, "outputFilePath:", outputFilePath);
+
+      let libreOfficeCommand;
+
+      if (process.platform === 'darwin') {
+          console.log("Detected MacOS. Using MacOS-specific LibreOffice command.");
+          // MacOSの場合、指定されたlibreOfficeFullExecPathかデフォルトのパスを使用
+          const macLibreOfficePath = libreOfficeFullExecPath || path.join(libreOfficeDefaultDir, libreOfficeDefaultExecPath);
+          libreOfficeCommand = `${macLibreOfficePath} --convert-to pdf --outdir "${path.dirname(outputFilePath)}" "${filePath}"`;
+      } else if (process.platform === 'win32') {
+          console.log("Detected Windows. Using Windows-specific LibreOffice command.");
+          // Windowsの場合、指定されたlibreOfficeFullExecPathかデフォルトのパスを使用
+          const winLibreOfficePath = libreOfficeFullExecPath || path.join(libreOfficeDefaultDir, libreOfficeDefaultExecPath);
+          libreOfficeCommand = `"${winLibreOfficePath}" --headless --convert-to pdf "${filePath}" --outdir "${path.dirname(outputFilePath)}"`;
       } else {
-        const generatedPdfPath = path.join(path.dirname(outputFilePath), path.basename(filePath, path.extname(filePath)) + ".pdf");
-        fs.rename(generatedPdfPath, outputFilePath, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(outputFilePath);
-          }
-        });
+          console.error("Unsupported OS detected.");
+          reject(new Error("Unsupported OS detected."));
+          return;
       }
-    });
-  }});
+
+      exec(libreOfficeCommand, (error: Error | null) => {
+          if (error) {
+              console.error("Error during LibreOffice conversion:", error);
+              reject(error);
+          } else {
+              const generatedPdfPath = path.join(path.dirname(outputFilePath), path.basename(filePath, path.extname(filePath)) + ".pdf");
+              fs.rename(generatedPdfPath, outputFilePath, (err) => {
+                  if (err) {
+                      console.error("Error renaming file:", err);
+                      reject(err);
+                  } else {
+                      console.log("File renaming completed.");
+                      resolve(outputFilePath);
+                  }
+              });
+          }
+      });
+  });
 }
+
 
 // OSの一時フォルダを取得
 ipcMain.handle('get-os-tmpdir', () => {
@@ -460,7 +473,7 @@ ipcMain.handle('create-content-list', async (event, fileInfos: Array<{ name: str
   pdfDoc.registerFontkit(fontkit);
 
   // 外部フォントを読み込む
-  const fontBytes = fs.readFileSync(path.join(__dirname, '..\\..\\electron\\assets\\fonts\\ipaexm.ttf'));
+  const fontBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'electron', 'assets', 'fonts', 'ipaexm.ttf'));
   const font = await pdfDoc.embedFont(fontBytes);
 
   const page = pdfDoc.addPage([600, 800]);  // 適切なサイズに調整してください
@@ -501,7 +514,12 @@ ipcMain.handle('select-libreoffice-path', async (event) => {
 
   if (folders && folders.length > 0) {
     const selectedPath = folders[0];
-    const sofficePath = path.join(selectedPath, 'program', 'soffice.bin');
+    let sofficePath;
+    if (process.platform === 'darwin') {
+        sofficePath = path.join(selectedPath, 'Contents', 'MacOS', 'soffice');
+    } else {
+        sofficePath = path.join(selectedPath, 'program', 'soffice.bin');
+    }
 
     if (fs.existsSync(sofficePath)) {
       store.set('libreofficePath', sofficePath);
@@ -629,7 +647,7 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
 
     // 外部フォントを読み込む
     pdfDoc.registerFontkit(fontkit);
-    const fontBytes = fs.readFileSync(path.join(__dirname, '..\\..\\electron\\assets\\fonts\\ipaexm.ttf'));
+    const fontBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'electron', 'assets', 'fonts', 'ipaexm.ttf'));
     const font = await pdfDoc.embedFont(fontBytes);  
 
     const text = `${entry.name} ───── ${entry.startPage}ページ`;

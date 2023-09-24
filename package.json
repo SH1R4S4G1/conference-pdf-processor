@@ -11,6 +11,8 @@
     "start:frontend": "cd frontend && npm run start",
     "init:electron": "npm install",
     "start:electron": "tsc && electron ./build_electron/electron/main.js",
+    "start:electron:dev": "cross-env NODE_ENV=development electron ./build_electron/electron/main.js",
+    "start:electron:prod": "cross-env NODE_ENV=production electron ./build_electron/electron/main.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
@@ -25,7 +27,11 @@
       "target": "portable"
     },
     "mac": {
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "linux": {
       "target": [
@@ -52,6 +58,7 @@
     "@types/node": "^20.5.7",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
+    "cross-env": "^7.0.3",
     "electron": "^26.1.0",
     "electron-builder": "^24.6.3",
     "typescript": "^5.2.2"

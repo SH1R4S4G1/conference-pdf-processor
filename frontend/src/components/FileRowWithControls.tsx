@@ -74,8 +74,14 @@ type FileRowWithControlsProps = {
           autoFocus
         />
       ) : (
-        <span onClick={() => toggleEditing(true)}>{fileName}</span>
-      )}
+      <span 
+        className="whitespace-nowrap overflow-hidden overflow-ellipsis w-11/12" 
+        title={fileName} 
+        onClick={() => toggleEditing(true)}
+      >
+        {fileName}
+      </span>
+    )}
 
     {editing === false && (
       <div className="flex space-x-2 m-1">

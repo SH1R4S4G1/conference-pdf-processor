@@ -2,7 +2,7 @@
   // 処理の際には、フルパスを使用する。必要に応じて「path.basename()」を使用してファイル名のみを取得する。
 
   import React, { useState, useRef, useEffect } from 'react';
-  import { FaRegTrashAlt, FaFileUpload,FaCog } from 'react-icons/fa';
+  import { FaRegTrashAlt, FaFileUpload,FaCog,FaFilePdf,FaFileWord,FaFileExcel,FaFilePowerpoint } from 'react-icons/fa';
   import FileRowWithControls from './../components/FileRowWithControls';
   import CharacterComponent from './../components/CharacterComponent';
   import { AppStatus } from './../types/types';
@@ -169,13 +169,13 @@
     // ドラッグ＆ドロップでファイルを投入したときの処理
     const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      setStatus(AppStatus.PROCESSING);
     
       // ドロップされたファイルを取得
       const files = event.dataTransfer.files;
       console.log("投入されたファイル", files);
     
       for (let i = 0; i < files.length; i++) {
+        setStatus(AppStatus.PROCESSING);
         const file = files[i];
         const fileExt = file.name.split('.').pop()?.toLowerCase();
     
@@ -189,7 +189,7 @@
           console.log("Temp Directory:", tempDir);
 
           const uniqueFilename = Date.now() + ".pdf"; // 一時保存ディレクトリに保存するファイルの名前
-          const outputFilePath = path.join(tempDir, uniqueFilename).replace(/\//g, '\\'); // 一時保存ディレクトリに保存するファイルのパス
+          const outputFilePath = path.join(tempDir, uniqueFilename); // 一時保存ディレクトリに保存するファイルのパス
 
           console.log(fileExt, file.type, file.path, outputFilePath);
           
@@ -226,7 +226,6 @@
           displayError(`${file.name}はサポートされていないファイル形式です。`);
           // alert(`${file.name} is not a supported file type.`);
         }
-        
       }
     };
 
@@ -448,8 +447,14 @@
         <div 
           className="border-dashed border-2 h-60 flex justify-center items-center transition-colors hover:bg-gray-100 cursor-pointer" 
         >
-          <FaFileUpload size={30} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-          PDFをドロップ
+            <FaFileUpload size={30} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+            ファイルをドロップ
+            (
+            <FaFilePdf size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+            <FaFileWord size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+            <FaFileExcel size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+            <FaFilePowerpoint size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+            )
         </div>
 
         {uploadedFiles.length > 0 && (
@@ -457,7 +462,7 @@
 
             {/* Header part */}
             <div className="flex">
-              <div className="flex-none w-60 px-4 py-2 flex items-center justify-center border">ファイル名</div>
+              <div className="flex-none w-96 px-4 py-2 flex items-center justify-center border">ファイル名</div>
                 {patterns.map((pattern, index) => (
                   <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
 
@@ -625,7 +630,7 @@
             {/* Data part */}
             {uploadedFiles.map((file, index) => (
               <div key={file.tempPath} className={`flex`}>
-                 <div className="flex-none w-60 px-4 py-2 border">
+                 <div className="flex-none w-96 px-4 py-2 border">
                  <FileRowWithControls
                     fileName={file.originalName}
                     isFirst={index === 0}

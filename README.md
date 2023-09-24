@@ -31,7 +31,7 @@
 1. リポジトリをクローンまたはダウンロードします。
    
    ```bash
-   git clone [リポジトリのURL]
+   git clone https://github.com/SH1R4S4G1/conference-pdf-processor.git
    ```
 
 2. プロジェクトのルートディレクトリに移動します。

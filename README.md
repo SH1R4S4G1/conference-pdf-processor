@@ -20,9 +20,7 @@
 - Node.js (推奨バージョン: v14以上)
 - npm or yarn
 - MSOffice OR Libre Office
-- Typescript
-  tscの実行に権限が必要な場合があります。
-
+- Typescript (tscの実行に権限が必要な場合があります。)
    ```bash 
    　 Set-ExecutionPolicy RemoteSigned -Scope Process -Force
    ```

@@ -42,7 +42,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@next/font": "^13.4.19",
     "@pdf-lib/fontkit": "^1.1.1",

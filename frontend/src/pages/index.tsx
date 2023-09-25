@@ -5,6 +5,7 @@
   import { FaRegTrashAlt, FaFileUpload,FaCog,FaFilePdf,FaFileWord,FaFileExcel,FaFilePowerpoint,FaInfoCircle } from 'react-icons/fa';
   import FileRowWithControls from './../components/FileRowWithControls';
   import CharacterComponent from './../components/CharacterComponent';
+  import SettingsModal from './../components/SettingsModal';
   import LicenseModal from './../components/LicenseModal';
   import { AppStatus } from './../types/types';
   import axios from 'axios';
@@ -752,7 +753,7 @@
           </button>
           )}
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 p-5">
           <button 
             className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
             onClick={() => setShowSettings(true)}
@@ -770,20 +771,12 @@
         </div>
 
 
-        {showSettings && (
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-5 bg-gray-200 border border-gray-300 z-50">
-            <button onClick={handlePathChange} className="p-2 bg-blue-500 text-white rounded">
-              LibreOfficeのインストールフォルダを選択
-            </button>
-            <div>
-              <p>現在設定されているLibreOfficeのパス:</p>
-              <p>{currentLibreOfficePath || 'LibreOfficeの実行ファイルが見つかりません。'}</p>
-            </div>
-            <button onClick={() => setShowSettings(false)} className="ml-2 p-2 bg-red-500 text-white rounded">
-              閉じる
-            </button>
-          </div>
-        )}
+        <SettingsModal 
+          show={showSettings} 
+          onClose={() => setShowSettings(false)} 
+          handlePathChange={handlePathChange}
+          currentLibreOfficePath={currentLibreOfficePath}
+        />
 
         {showLicenses && (
           <LicenseModal show={showLicenses} onClose={() => setShowLicenses(false)} />

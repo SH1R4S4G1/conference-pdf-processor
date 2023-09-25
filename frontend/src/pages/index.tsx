@@ -2,9 +2,10 @@
   // 処理の際には、フルパスを使用する。必要に応じて「path.basename()」を使用してファイル名のみを取得する。
 
   import React, { useState, useRef, useEffect } from 'react';
-  import { FaRegTrashAlt, FaFileUpload,FaCog,FaFilePdf,FaFileWord,FaFileExcel,FaFilePowerpoint } from 'react-icons/fa';
+  import { FaRegTrashAlt, FaFileUpload,FaCog,FaFilePdf,FaFileWord,FaFileExcel,FaFilePowerpoint,FaInfoCircle } from 'react-icons/fa';
   import FileRowWithControls from './../components/FileRowWithControls';
   import CharacterComponent from './../components/CharacterComponent';
+  import LicenseModal from './../components/LicenseModal';
   import { AppStatus } from './../types/types';
   import axios from 'axios';
   import { ipcRenderer } from 'electron';
@@ -66,6 +67,7 @@
     // 設定画面関係
     const [showSettings, setShowSettings] = useState(false);
     const [currentLibreOfficePath, setCurrentLibreOfficePath] = useState<string | null>(null);
+    const [showLicenses, setShowLicenses] = useState(false);
 
     // エラーメッセージ
     const [showError, setShowError] = useState(false);
@@ -750,7 +752,23 @@
           </button>
           )}
 
-        <FaCog onClick={() => setShowSettings(true)} />
+        <div className="flex items-center space-x-4">
+          <button 
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
+            onClick={() => setShowSettings(true)}
+            aria-label="設定"
+          >
+            <FaCog />
+          </button>
+          <button 
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
+            onClick={() => setShowLicenses(true)}
+            aria-label="ライセンス情報"
+          >
+            <FaInfoCircle />
+          </button>
+        </div>
+
 
         {showSettings && (
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-5 bg-gray-200 border border-gray-300 z-50">
@@ -765,6 +783,10 @@
               閉じる
             </button>
           </div>
+        )}
+
+        {showLicenses && (
+          <LicenseModal show={showLicenses} onClose={() => setShowLicenses(false)} />
         )}
 
         <div className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-red-600 text-white rounded-t ${showError ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-300`}>

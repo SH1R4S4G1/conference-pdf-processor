@@ -1,0 +1,472 @@
+// components/LicenseModal.tsx
+
+import React from 'react';
+
+type LicenseModalProps = {
+  show: boolean;
+  onClose: () => void;
+}
+
+const LISENSE: string = `
+
+以下のライブラリは0BSDライセンスの下で利用されています：
+
+- tslib@1.14.1 (https://github.com/Microsoft/tslib)
+
+
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリはApache-2.0ライセンスの下で利用されています（変更がある場合、それについての通知が必要です）：
+
+- @malept/cross-spawn-promise@1.1.1 (https://github.com/malept/cross-spawn-promise)
+- ejs@3.1.9 (https://github.com/mde/ejs)
+- filelist@1.0.4 (https://github.com/mde/filelist)
+- jake@10.8.7 (https://github.com/jakejs/jake)
+- sumchecker@3.0.1 (https://github.com/malept/sumchecker)
+- typescript@4.9.5 (https://github.com/Microsoft/TypeScript)
+- typescript@5.2.2 (https://github.com/Microsoft/TypeScript)
+
+
+Apache License 2.0
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリはBSD-2-Clauseライセンスの下で利用されています：
+
+- @electron/osx-sign@1.0.5 (https://github.com/electron/osx-sign)
+- dotenv-expand@5.1.0 (リポジトリ情報なし)
+- dotenv@9.0.2 (https://github.com/motdotla/dotenv)
+- extract-zip@2.0.1 (https://github.com/maxogden/extract-zip)
+- http-cache-semantics@4.1.1 (https://github.com/kornelski/http-cache-semantics)
+- json-schema-typed@7.0.3 (https://github.com/typeslick/json-schema-typed)
+- uri-js@4.4.1 (https://github.com/garycourt/uri-js)
+
+
+BSD 2-Clause "Simplified" License
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリはBSD-3-Clauseライセンスの下で利用されています：
+
+- global-agent@3.0.0 (https://github.com/gajus/global-agent)
+- roarr@2.15.4 (https://github.com/gajus/roarr)
+- source-map@0.6.1 (https://github.com/mozilla/source-map)
+- sprintf-js@1.1.3 (https://github.com/alexei/sprintf.js)
+
+
+BSD-3-Clause License
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the Gajus Kuizinas (http://gajus.com/) nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL ANUARY BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリはISCライセンスの下で利用されています：
+
+- at-least-node@1.0.0 (https://github.com/RyanZim/at-least-node)
+- chownr@2.0.0 (https://github.com/isaacs/chownr)
+- cliui@8.0.1 (https://github.com/yargs/cliui)
+- conference-pdf-processor@0.0.1 (リポジトリ情報なし)
+- fs-minipass@2.1.0 (https://github.com/npm/fs-minipass)
+- fs.realpath@1.0.0 (https://github.com/isaacs/fs.realpath)
+- get-caller-file@2.0.5 (https://github.com/stefanpenner/get-caller-file)
+- glob@7.2.3 (https://github.com/isaacs/node-glob)
+- graceful-fs@4.2.11 (https://github.com/isaacs/node-graceful-fs)
+- hosted-git-info@4.1.0 (https://github.com/npm/hosted-git-info)
+- inflight@1.0.6 (https://github.com/npm/inflight)
+- inherits@2.0.4 (https://github.com/isaacs/inherits)
+- isexe@2.0.0 (https://github.com/isaacs/isexe)
+- json-stringify-safe@5.0.1 (https://github.com/isaacs/json-stringify-safe)
+- lru-cache@6.0.0 (https://github.com/isaacs/node-lru-cache)
+- minimatch@3.1.2 (https://github.com/isaacs/minimatch)
+- minimatch@5.1.6 (https://github.com/isaacs/minimatch)
+- minipass@3.3.6 (https://github.com/isaacs/minipass)
+- minipass@5.0.0 (https://github.com/isaacs/minipass)
+- once@1.4.0 (https://github.com/isaacs/once)
+- rimraf@3.0.2 (https://github.com/isaacs/rimraf)
+- sax@1.2.4 (https://github.com/isaacs/sax-js)
+- semver@6.3.1 (https://github.com/npm/node-semver)
+- semver@7.5.4 (https://github.com/npm/node-semver)
+- tar@6.2.0 (https://github.com/isaacs/node-tar)
+- which@2.0.2 (https://github.com/isaacs/node-which)
+- wrappy@1.0.2 (https://github.com/npm/wrappy)
+- y18n@5.0.8 (https://github.com/yargs/y18n)
+- yallist@4.0.0 (https://github.com/isaacs/yallist)
+- yargs-parser@21.1.1 (https://github.com/yargs/yargs-parser)
+
+
+ISC License
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリはMITライセンスの下で利用されています：
+
+- 7zip-bin@5.1.1 (https://github.com/develar/7zip-bin)
+- @develar/schema-utils@2.6.5 (https://github.com/webpack/schema-utils)
+- @electron/asar@3.2.5 (https://github.com/electron/asar)
+- @electron/get@2.0.3 (https://github.com/electron/get)
+- @electron/notarize@2.1.0 (https://github.com/electron/notarize)
+- @electron/universal@1.4.1 (https://github.com/electron/universal)
+- @malept/flatpak-bundler@0.4.0 (https://github.com/malept/flatpak-bundler)
+- @next/font@13.5.2 (https://github.com/vercel/next.js)
+- @pdf-lib/fontkit@1.1.1 (https://github.com/Hopding/fontkit)
+- @pdf-lib/standard-fonts@1.0.0 (https://github.com/Hopding/standard-fonts)
+- @pdf-lib/upng@1.0.1 (https://github.com/Hopding/upng)
+- @sindresorhus/is@4.6.0 (https://github.com/sindresorhus/is)
+- @szmarczak/http-timer@4.0.6 (https://github.com/szmarczak/http-timer)
+- @tootallnate/once@2.0.0 (https://github.com/TooTallNate/once)
+- @types/cacheable-request@6.0.3 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/debug@4.1.8 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/fs-extra@9.0.13 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/http-cache-semantics@4.0.2 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/keyv@3.1.4 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/ms@0.7.31 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/node@18.17.18 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/node@20.6.3 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/prop-types@15.7.6 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/react-dom@18.2.7 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/react@18.2.22 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/responselike@1.0.0 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/scheduler@0.16.3 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @types/yauzl@2.10.0 (https://github.com/DefinitelyTyped/DefinitelyTyped)
+- @xmldom/xmldom@0.8.10 (https://github.com/xmldom/xmldom)
+- agent-base@6.0.2 (https://github.com/TooTallNate/node-agent-base)
+- ajv-formats@2.1.1 (https://github.com/ajv-validator/ajv-formats)
+- ajv-keywords@3.5.2 (https://github.com/epoberezkin/ajv-keywords)
+- ajv@6.12.6 (https://github.com/ajv-validator/ajv)
+- ajv@8.12.0 (https://github.com/ajv-validator/ajv)
+- ansi-regex@5.0.1 (https://github.com/chalk/ansi-regex)
+- ansi-styles@4.3.0 (https://github.com/chalk/ansi-styles)
+- app-builder-bin@4.0.0 (https://github.com/develar/app-builder)
+- app-builder-lib@24.6.4 (https://github.com/electron-userland/electron-builder)
+- async-exit-hook@2.0.1 (https://github.com/tapppi/async-exit-hook)
+- async@3.2.4 (https://github.com/caolan/async)
+- asynckit@0.4.0 (https://github.com/alexindigo/asynckit)
+- atomically@1.7.0 (https://github.com/fabiospampinato/atomically)
+- axios@1.5.0 (https://github.com/axios/axios)
+- balanced-match@1.0.2 (https://github.com/juliangruber/balanced-match)
+- base64-js@1.5.1 (https://github.com/beatgammit/base64-js)
+- bluebird-lst@1.0.9 (https://github.com/develar/fs-extra-p)
+- bluebird@3.7.2 (https://github.com/petkaantonov/bluebird)
+- boolean@3.2.0 (https://github.com/thenativeweb/boolean)
+- brace-expansion@1.1.11 (https://github.com/juliangruber/brace-expansion)
+- brace-expansion@2.0.1 (https://github.com/juliangruber/brace-expansion)
+- buffer-crc32@0.2.13 (https://github.com/brianloveswords/buffer-crc32)
+- buffer-equal@1.0.1 (https://github.com/inspect-js/buffer-equal)
+- buffer-from@1.1.2 (https://github.com/LinusU/buffer-from)
+- builder-util-runtime@9.2.1 (https://github.com/electron-userland/electron-builder)
+- builder-util@24.5.0 (https://github.com/electron-userland/electron-builder)
+- cacheable-lookup@5.0.4 (https://github.com/szmarczak/cacheable-lookup)
+- cacheable-request@7.0.4 (https://github.com/lukechilds/cacheable-request)
+- chalk@4.1.2 (https://github.com/chalk/chalk)
+- chromium-pickle-js@0.2.0 (https://github.com/electron/node-chromium-pickle-js)
+- ci-info@3.8.0 (https://github.com/watson/ci-info)
+- clone-response@1.0.3 (https://github.com/sindresorhus/clone-response)
+- color-convert@2.0.1 (https://github.com/Qix-/color-convert)
+- color-name@1.1.4 (https://github.com/colorjs/color-name)
+- combined-stream@1.0.8 (https://github.com/felixge/node-combined-stream)
+- commander@5.1.0 (https://github.com/tj/commander.js)
+- compare-version@0.1.2 (https://github.com/kevva/compare-version)
+- concat-map@0.0.1 (https://github.com/substack/node-concat-map)
+- conf@10.2.0 (https://github.com/sindresorhus/conf)
+- config-file-ts@0.2.4 (https://github.com/mighdoll/config-file-ts)
+- core-util-is@1.0.2 (https://github.com/isaacs/core-util-is)
+- cross-env@7.0.3 (https://github.com/kentcdodds/cross-env)
+- cross-spawn@7.0.3 (https://github.com/moxystudio/node-cross-spawn)
+- csstype@3.1.2 (https://github.com/frenic/csstype)
+- debounce-fn@4.0.0 (https://github.com/sindresorhus/debounce-fn)
+- debug@4.3.4 (https://github.com/debug-js/debug)
+- decompress-response@6.0.0 (https://github.com/sindresorhus/decompress-response)
+- defer-to-connect@2.0.1 (https://github.com/szmarczak/defer-to-connect)
+- define-data-property@1.1.0 (https://github.com/ljharb/define-data-property)
+- define-properties@1.2.1 (https://github.com/ljharb/define-properties)
+- delayed-stream@1.0.0 (https://github.com/felixge/node-delayed-stream)
+- detect-node@2.1.0 (https://github.com/iliakan/detect-node)
+- dir-compare@3.3.0 (https://github.com/gliviu/dir-compare)
+- dmg-builder@24.6.4 (https://github.com/electron-userland/electron-builder)
+- dot-prop@6.0.1 (https://github.com/sindresorhus/dot-prop)
+- electron-builder@24.6.4 (https://github.com/electron-userland/electron-builder)
+- electron-publish@24.5.0 (https://github.com/electron-userland/electron-builder)
+- electron-store@8.1.0 (https://github.com/sindresorhus/electron-store)
+- electron@26.2.2 (https://github.com/electron/electron)
+- emoji-regex@8.0.0 (https://github.com/mathiasbynens/emoji-regex)
+- end-of-stream@1.4.4 (https://github.com/mafintosh/end-of-stream)
+- env-paths@2.2.1 (https://github.com/sindresorhus/env-paths)
+- err-code@2.0.3 (https://github.com/IndigoUnited/js-err-code)
+- es6-error@4.1.1 (https://github.com/bjyoungblood/es6-error)
+- escalade@3.1.1 (https://github.com/lukeed/escalade)
+- escape-string-regexp@4.0.0 (https://github.com/sindresorhus/escape-string-regexp)
+- fast-deep-equal@3.1.3 (https://github.com/epoberezkin/fast-deep-equal)
+- fast-json-stable-stringify@2.1.0 (https://github.com/epoberezkin/fast-json-stable-stringify)
+- fd-slicer@1.1.0 (https://github.com/andrewrk/node-fd-slicer)
+- find-up@3.0.0 (https://github.com/sindresorhus/find-up)
+- follow-redirects@1.15.3 (https://github.com/follow-redirects/follow-redirects)
+- form-data@4.0.0 (https://github.com/form-data/form-data)
+- fs-extra@10.1.0 (https://github.com/jprichardson/node-fs-extra)
+- fs-extra@8.1.0 (https://github.com/jprichardson/node-fs-extra)
+- fs-extra@9.1.0 (https://github.com/jprichardson/node-fs-extra)
+- function-bind@1.1.1 (https://github.com/Raynos/function-bind)
+- get-intrinsic@1.2.1 (https://github.com/ljharb/get-intrinsic)
+- get-stream@5.2.0 (https://github.com/sindresorhus/get-stream)
+- globalthis@1.0.3 (https://github.com/ljharb/System.global)
+- gopd@1.0.1 (https://github.com/ljharb/gopd)
+- got@11.8.6 (https://github.com/sindresorhus/got)
+- has-flag@4.0.0 (https://github.com/sindresorhus/has-flag)
+- has-property-descriptors@1.0.0 (https://github.com/inspect-js/has-property-descriptors)
+- has-proto@1.0.1 (https://github.com/inspect-js/has-proto)
+- has-symbols@1.0.3 (https://github.com/inspect-js/has-symbols)
+- has@1.0.3 (https://github.com/tarruda/has)
+- http-proxy-agent@5.0.0 (https://github.com/TooTallNate/node-http-proxy-agent)
+- http2-wrapper@1.0.3 (https://github.com/szmarczak/http2-wrapper)
+- https-proxy-agent@5.0.1 (https://github.com/TooTallNate/node-https-proxy-agent)
+- iconv-lite@0.6.3 (https://github.com/ashtuchkin/iconv-lite)
+- if-async@3.7.4 (https://github.com/kessler/if-async)
+- is-ci@3.0.1 (https://github.com/watson/is-ci)
+- is-fullwidth-code-point@3.0.0 (https://github.com/sindresorhus/is-fullwidth-code-point)
+- is-obj@2.0.0 (https://github.com/sindresorhus/is-obj)
+- isarray@0.0.1 (https://github.com/juliangruber/isarray)
+- isbinaryfile@4.0.10 (https://github.com/gjtorikian/isBinaryFile)
+- isbinaryfile@5.0.0 (https://github.com/gjtorikian/isBinaryFile)
+- js-tokens@4.0.0 (https://github.com/lydell/js-tokens)
+- js-yaml@4.1.0 (https://github.com/nodeca/js-yaml)
+- json-buffer@3.0.1 (https://github.com/dominictarr/json-buffer)
+- json-schema-traverse@0.4.1 (https://github.com/epoberezkin/json-schema-traverse)
+- json-schema-traverse@1.0.0 (https://github.com/epoberezkin/json-schema-traverse)
+- json5@2.2.3 (https://github.com/json5/json5)
+- jsonfile@4.0.0 (https://github.com/jprichardson/node-jsonfile)
+- jsonfile@6.1.0 (https://github.com/jprichardson/node-jsonfile)
+- keyv@4.5.3 (https://github.com/jaredwray/keyv)
+- lazy-val@1.0.5 (https://github.com/develar/lazy-val)
+- locate-path@3.0.0 (https://github.com/sindresorhus/locate-path)
+- lodash@4.17.21 (https://github.com/lodash/lodash)
+- loose-envify@1.4.0 (https://github.com/zertosh/loose-envify)
+- lowercase-keys@2.0.0 (https://github.com/sindresorhus/lowercase-keys)
+- matcher@3.0.0 (https://github.com/sindresorhus/matcher)
+- mime-db@1.52.0 (https://github.com/jshttp/mime-db)
+- mime-types@2.1.35 (https://github.com/jshttp/mime-types)
+- mime@2.6.0 (https://github.com/broofa/mime)
+- mimic-fn@2.1.0 (https://github.com/sindresorhus/mimic-fn)
+- mimic-fn@3.1.0 (https://github.com/sindresorhus/mimic-fn)
+- mimic-response@1.0.1 (https://github.com/sindresorhus/mimic-response)
+- mimic-response@3.1.0 (https://github.com/sindresorhus/mimic-response)
+- minimist@1.2.8 (https://github.com/minimistjs/minimist)
+- minizlib@2.1.2 (https://github.com/isaacs/minizlib)
+- mkdirp@1.0.4 (https://github.com/isaacs/node-mkdirp)
+- ms@2.1.2 (https://github.com/zeit/ms)
+- normalize-url@6.1.0 (https://github.com/sindresorhus/normalize-url)
+- object-assign@4.1.1 (https://github.com/sindresorhus/object-assign)
+- object-keys@1.1.1 (https://github.com/ljharb/object-keys)
+- onetime@5.1.2 (https://github.com/sindresorhus/onetime)
+- p-cancelable@2.1.1 (https://github.com/sindresorhus/p-cancelable)
+- p-limit@2.3.0 (https://github.com/sindresorhus/p-limit)
+- p-locate@3.0.0 (https://github.com/sindresorhus/p-locate)
+- p-try@2.2.0 (https://github.com/sindresorhus/p-try)
+- path-exists@3.0.0 (https://github.com/sindresorhus/path-exists)
+- path-is-absolute@1.0.1 (https://github.com/sindresorhus/path-is-absolute)
+- path-key@3.1.1 (https://github.com/sindresorhus/path-key)
+- pdf-lib@1.17.1 (https://github.com/Hopding/pdf-lib)
+- pend@1.2.0 (https://github.com/andrewrk/node-pend)
+- pkg-up@3.1.0 (https://github.com/sindresorhus/pkg-up)
+- plist@3.1.0 (https://github.com/TooTallNate/node-plist)
+- progress@2.0.3 (https://github.com/visionmedia/node-progress)
+- promise-retry@2.0.1 (https://github.com/IndigoUnited/node-promise-retry)
+- proxy-from-env@1.1.0 (https://github.com/Rob--W/proxy-from-env)
+- pump@3.0.0 (https://github.com/mafintosh/pump)
+- punycode@2.3.0 (https://github.com/mathiasbynens/punycode.js)
+- quick-lru@5.1.1 (https://github.com/sindresorhus/quick-lru)
+- react-dom@17.0.2 (https://github.com/facebook/react)
+- react-icons@4.11.0 (https://github.com/react-icons/react-icons)
+- react@17.0.2 (https://github.com/facebook/react)
+- read-config-file@6.3.2 (https://github.com/develar/read-config-file)
+- readable-stream@1.0.34 (https://github.com/isaacs/readable-stream)
+- regedit@5.1.2 (https://github.com/ironSource/node-regedit)
+- require-directory@2.1.1 (https://github.com/troygoode/node-require-directory)
+- require-from-string@2.0.2 (https://github.com/floatdrop/require-from-string)
+- resolve-alpn@1.2.1 (https://github.com/szmarczak/resolve-alpn)
+- responselike@2.0.1 (https://github.com/sindresorhus/responselike)
+- retry@0.12.0 (https://github.com/tim-kos/node-retry)
+- safer-buffer@2.1.2 (https://github.com/ChALkeR/safer-buffer)
+- scheduler@0.20.2 (https://github.com/facebook/react)
+- semver-compare@1.0.0 (https://github.com/substack/semver-compare)
+- serialize-error@7.0.1 (https://github.com/sindresorhus/serialize-error)
+- shebang-command@2.0.0 (https://github.com/kevva/shebang-command)
+- shebang-regex@3.0.0 (https://github.com/sindresorhus/shebang-regex)
+- simple-update-notifier@2.0.0 (https://github.com/alexbrazier/simple-update-notifier)
+- source-map-support@0.5.21 (https://github.com/evanw/node-source-map-support)
+- stat-mode@1.0.0 (https://github.com/TooTallNate/stat-mode)
+- stream-slicer@0.0.6 (https://github.com/kessler/stream-slicer)
+- string-width@4.2.3 (https://github.com/sindresorhus/string-width)
+- string_decoder@0.10.31 (https://github.com/rvagg/string_decoder)
+- strip-ansi@6.0.1 (https://github.com/chalk/strip-ansi)
+- supports-color@7.2.0 (https://github.com/chalk/supports-color)
+- temp-file@3.4.0 (https://github.com/develar/temp-file)
+- through2@0.6.5 (https://github.com/rvagg/through2)
+- tmp-promise@3.0.3 (https://github.com/benjamingr/tmp-promise)
+- tmp@0.2.1 (https://github.com/raszi/node-tmp)
+- universalify@0.1.2 (https://github.com/RyanZim/universalify)
+- universalify@2.0.0 (https://github.com/RyanZim/universalify)
+- wrap-ansi@7.0.0 (https://github.com/chalk/wrap-ansi)
+- xmlbuilder@15.1.1 (https://github.com/oozcitak/xmlbuilder-js)
+- xtend@4.0.2 (https://github.com/Raynos/xtend)
+- yargs@17.7.2 (https://github.com/yargs/yargs)
+- yauzl@2.10.0 (https://github.com/thejoshwolfe/yauzl)
+- pako@1.0.11 (https://github.com/nodeca/pako)
+
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリは(MIT OR CC0-1.0)ライセンスの下で利用されています（いずれかのライセンスの要件を選択して満たすことができます）：
+
+- type-fest@0.13.1 (https://github.com/sindresorhus/type-fest)
+- type-fest@2.19.0 (https://github.com/sindresorhus/type-fest)
+
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+Creative Commons Zero v1.0 Universal
+
+For more information, please see:
+http://creativecommons.org/publicdomain/zero/1.0/
+
+-----------------------------------------------------------------------------------------
+
+以下のライブラリはWTFPL OR ISCライセンスの下で利用されています（いずれかのライセンスの要件を選択して満たすことができます）：
+
+- sanitize-filename@1.6.3 (https://github.com/parshap/node-sanitize-filename)
+
+
+DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+
+Version 2, December 2004
+Copyright (C) 2004 Sam Hocevar
+Everyone is permitted to copy and distribute verbatim or modified copies of this license document, and changing it is allowed as long as the name is changed.
+
+DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+0. You just DO WHAT THE FUCK YOU WANT TO.
+
+
+ISC License
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+`
+
+const LicenseModal: React.FC<LicenseModalProps> = ({ show, onClose }) => {
+    if (!show) return null;
+  
+    return (
+        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50">
+          {/* Overlay */}
+          <div className="absolute top-0 left-0 w-full h-full bg-black opacity-50" onClick={onClose}></div>
+    
+          {/* Modal Content */}
+          <div className="relative bg-white w-4/5 h-4/5 p-8 border-4 border-gray-700 rounded-lg shadow-lg">
+            <div className="flex justify-between items-start mb-4">
+              <h1 className="text-lg font-bold">ライセンス情報</h1>
+              <button onClick={onClose} className="p-2 bg-transparent text-3xl font-bold text-gray-600 hover:text-gray-800 transition-colors">
+                &times;
+              </button>
+            </div>
+            <div className="overflow-y-auto h-[calc(80%-2rem)]">
+              <p style={{ whiteSpace: 'pre-wrap' }}>{LISENSE}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    export default LicenseModal;

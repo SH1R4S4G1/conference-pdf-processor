@@ -39,6 +39,9 @@
   };
 
   export default function Home() {
+    // ファイルのドラッグ＆ドロップに関するステート
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
     // 生のファイル一覧
     const [fileList, setFileList] = useState<string[]>([]);
 
@@ -169,13 +172,30 @@
       };
     }, [editingPatternId]);
 
-    // ドラッグ＆ドロップでファイルを投入したときの処理
     const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
     
       // ドロップされたファイルを取得
       const files = event.dataTransfer.files;
-      console.log("投入されたファイル", files);
+    
+      // processFilesを呼び出す
+      await processFiles(Array.from(files));
+    };
+    
+    
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      // 選択されたファイルを取得
+      const files = event.target.files;
+    
+      if (files) {
+        // processFiles関数を呼び出す
+        await processFiles(Array.from(files));
+      }
+    };
+    
+
+    // ドラッグ＆ドロップでファイルを投入したときの処理
+    const processFiles = async (files: File[]) => {
     
       for (let i = 0; i < files.length; i++) {
         setStatus(AppStatus.PROCESSING);
@@ -442,258 +462,86 @@
     // TODO: パターンの順番を変更できるようにする
     // TODO: テーブルが表示されていない間だけ、見かけのドロップエリアを広げる
     return (
-      <div 
-      className="p-5 h-screen w-screen"
-      onDrop={onDrop}
-      onDragOver={(e) => e.preventDefault()}
-      >  
-        <div 
-          className="border-dashed border-2 h-60 flex justify-center items-center transition-colors hover:bg-gray-100 cursor-pointer" 
-        >
-            <FaFileUpload size={30} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-            ファイルをドロップ
-            (
-            <FaFilePdf size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-            <FaFileWord size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-            <FaFileExcel size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-            <FaFilePowerpoint size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-            )
-        </div>
-
-        {uploadedFiles.length > 0 && (
-          <div id="tableWrapper" className="mt-10 relative overflow-x-auto">
-
-            {/* Header part */}
-            <div className="flex">
-              <div className="flex-none w-96 px-4 py-2 flex items-center justify-center border">ファイル名</div>
-                {patterns.map((pattern, index) => (
-                  <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
-
-                      {editingPatternId === pattern.id ? (
-                        <input
-                          ref={patternInputRef}
-                          type="text"
-                          value={pattern.name}
-                          onChange={e => {
-                            let newValue = e.target.value;
-                            if (!newValue || newValue.trim() === "") {
-                              newValue = "新しいパターン";
-                            }
-                            handlePatternNameChange(pattern.id, newValue);
-                          }}
-                          
-                          onKeyDown={e => handleEnterPress(e, pattern.id)}
-                          autoFocus
-                        />
-                      ) : (
-                        <span onClick={() => setEditingPatternId(pattern.id)}>
-                          {pattern.name}
-                        </span>
-                      )} {/* パターン名の編集 */}
-
-                      {patterns.length > 1 && (
-                        <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
-                      )}
-                      <br />
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="cursor-pointer peer sr-only"
-                          checked={pattern.addPageNumbers}
-                          onChange={e => {
-                            const updatedPatterns = patterns.map(p => {
-                              if (p.id === pattern.id) {
-                                const newAddPageNumbers = e.target.checked;
-                                return { 
-                                  ...p, 
-                                  addPageNumbers: newAddPageNumbers,
-                                  // ページ数を付与しない場合、以下の2つのオプションも選択解除
-                                  createContentList: newAddPageNumbers ? p.createContentList : false,
-                                  addBlankPageForContentList: newAddPageNumbers ? p.addBlankPageForContentList : false
-                                };
-                              }
-                              return p;
-                            });
-                            setPatterns(updatedPatterns);
-                          }}
-                        />
-                        <span
-                          className="block w-[2em] cursor-pointer bg-gray-500 rounded-full 
-                          p-[1px] after:block after:h-[1em] after:w-[1em] after:rounded-full 
-                          after:bg-white after:transition peer-checked:bg-blue-500 
-                          peer-checked:after:translate-x-[calc(100%-2px)]"
-                        >
-                        </span>
-                        <span>ページ数を付与</span>
-                    </label>
-
-                    <input 
-                        type="checkbox" 
-                        id="alignOrientation" 
-                        name="alignOrientation"
-                        checked={pattern.alignOrientation}
-                        onChange={e => {
-                          const updatedPatterns = patterns.map(p => {
-                            if (p.id === pattern.id) {
-                              return { ...p, alignOrientation: e.target.checked };
-                            }
-                            return p;
-                          });
-                          setPatterns(updatedPatterns);
-                        }}
-                    />
-                    <label htmlFor="alignOrientation">資料の向きを合わせる</label>
-
-
-                    {pattern.addPageNumbers && (
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={pattern.createContentList}
-                          onChange={e => {
-                            const updatedPatterns = patterns.map(p => {
-                              if (p.id === pattern.id) {
-                                const newCreateContentList = e.target.checked;
-                                return { 
-                                  ...p, 
-                                  createContentList: newCreateContentList,
-                                  // ファイル一覧を作成しない場合、以下のオプションも選択解除
-                                  addBlankPageForContentList: newCreateContentList ? p.addBlankPageForContentList : false
-                                };
-                              }                              return p;
-                            });
-                            setPatterns(updatedPatterns);
-                          }}
-                        />
-                        <span>ファイル一覧を作成</span>
-                      </label>
-                    )}
-
-                    {pattern.addPageNumbers && pattern.createContentList && (
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={pattern.addBlankPageForContentList}
-                          onChange={e => {
-                            const updatedPatterns = patterns.map(p => {
-                              if (p.id === pattern.id) {
-                                return { ...p, addBlankPageForContentList: e.target.checked };
-                              }
-                              return p;
-                            });
-                            setPatterns(updatedPatterns);
-                          }}
-                        />
-                        <span>ファイル一覧が奇数の場合白紙を差込む</span>
-                      </label>
-                    )}
-
-                      {/* 位置の選択ドロップダウン */}
-                      <select
-                        value={pattern.position}
-                        onChange={e => {
-                          const updatedPatterns = patterns.map(p => {
-                            if (p.id === pattern.id) {
-                              return { ...p, position: e.target.value as 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' };
-                            }
-                            return p;
-                          });
-                          setPatterns(updatedPatterns);
-                        }}
-                      >
-                        <option value="top-left">左上</option>
-                        <option value="top-center">中央上</option>
-                        <option value="top-right">右上</option>
-                        <option value="bottom-left">左下</option>
-                        <option value="bottom-center">中央下</option>
-                        <option value="bottom-right">右下</option>
-                      </select>
-
-                      {/* サイズの選択ドロップダウン */}
-                      <select
-                        value={pattern.size}
-                        onChange={e => {
-                          const updatedPatterns = patterns.map(p => {
-                            if (p.id === pattern.id) {
-                              return { ...p, size: parseInt(e.target.value) };
-                            }
-                            return p;
-                          });
-                          setPatterns(updatedPatterns);
-                        }}
-                      >
-                        {Array.from({ length: 57 }, (_, i) => i + 8).map(size => (
-                          <option key={size} value={size}>{size}px</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
+      <div>
+          
+          <div 
+            className="p-5 h-screen w-screen"
+            onDrop={onDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <input 
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+            />
+            <div 
+              className="border-dashed border-2 h-60 flex justify-center items-center transition-colors hover:bg-gray-100 cursor-pointer" 
+              onClick={() => fileInputRef.current?.click()} // この行を追加
+            >
+              <FaFileUpload size={30} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              ファイルをドロップ
+              (
+              <FaFilePdf size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              <FaFileWord size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              <FaFileExcel size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              <FaFilePowerpoint size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              )
             </div>
 
-            {/* Data part */}
-            {uploadedFiles.map((file, index) => (
-              <div key={file.tempPath} className={`flex`}>
-                 <div className="flex-none w-96 px-4 py-2 border">
-                 <FileRowWithControls
-                    fileName={file.originalName}
-                    isFirst={index === 0}
-                    isLast={index === uploadedFiles.length - 1}
-                    onMoveUp={() => handleMoveFileUp(index)}
-                    onMoveDown={() => handleMoveFileDown(index)}
-                    onRemove={() => handleRemoveFile(index)}
-                    onFileNameChange={(newFileName) => {
-                      const updatedFiles = [...uploadedFiles];
-                      // newFileNameが空欄だった場合、「新しいファイル」を設定
-                      // if (!newFileName || newFileName.trim() === "") {newFileName = "新しいファイル";}
-                      updatedFiles[index].originalName = newFileName;
-                      setUploadedFiles(updatedFiles);
-                    }}
-                    onEditStateChange={(isEditing) => {
-                        if (isEditing) {
-                          setIsEditingFileName(true);
-                        } else
-                          setIsEditingFileName(false);
-                    }}
-                  />
-                  </div>
-            {patterns.map((pattern, index) => (
-              <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="cursor-pointer mr-2"
-                          checked={pattern.selectedFiles?.includes(file.tempPath)}
-                          onChange={e => {
-                            const updatedPatterns = patterns.map(p => {
-                              if (p.id === pattern.id) {
-                                if (e.target.checked) {
-                                  return { ...p, selectedFiles: p.selectedFiles ? [...p.selectedFiles, file.tempPath] : [file.tempPath] };
-                                } else {
-                                  return { ...p, selectedFiles: p.selectedFiles?.filter(f => f !== file.tempPath) };
-                                }
+
+          {uploadedFiles.length > 0 && (
+            <div id="tableWrapper" className="mt-10 relative overflow-x-auto">
+
+              {/* Header part */}
+              <div className="flex">
+                <div className="flex-none w-96 px-4 py-2 flex items-center justify-center border">ファイル名</div>
+                  {patterns.map((pattern, index) => (
+                    <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+
+                        {editingPatternId === pattern.id ? (
+                          <input
+                            ref={patternInputRef}
+                            type="text"
+                            value={pattern.name}
+                            onChange={e => {
+                              let newValue = e.target.value;
+                              if (!newValue || newValue.trim() === "") {
+                                newValue = "新しいパターン";
                               }
-                              return p;
-                            });
-                            setPatterns(updatedPatterns);
-                          }}
-                        />
-                        <span>統合PDFに追加</span>
-                      </label>
-                      <div className="border-t mt-2 mb-2"></div>
-                      {oddPageFiles.includes(file.tempPath) && (
-                        <label className="flex items-center mt-2">
+                              handlePatternNameChange(pattern.id, newValue);
+                            }}
+                            
+                            onKeyDown={e => handleEnterPress(e, pattern.id)}
+                            autoFocus
+                          />
+                        ) : (
+                          <span onClick={() => setEditingPatternId(pattern.id)}>
+                            {pattern.name}
+                          </span>
+                        )} {/* パターン名の編集 */}
+
+                        {patterns.length > 1 && (
+                          <FaRegTrashAlt size={30} color="red" className="px-2 py-1 hover:bg-red-100 rounded" onClick={() => removePattern(pattern.id)} />
+                        )}
+                        <br />
+                        <label className="flex items-center space-x-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            className="cursor-pointer mr-2 peer sr-only"
-                            checked={pattern.oddPageFiles.includes(file.tempPath)}
+                            className="cursor-pointer peer sr-only"
+                            checked={pattern.addPageNumbers}
                             onChange={e => {
                               const updatedPatterns = patterns.map(p => {
                                 if (p.id === pattern.id) {
-                                  if (e.target.checked) {
-                                    return { ...p, oddPageFiles: [...p.oddPageFiles, file.tempPath] };
-                                  } else {
-                                    return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file.tempPath) };
-                                  }
+                                  const newAddPageNumbers = e.target.checked;
+                                  return { 
+                                    ...p, 
+                                    addPageNumbers: newAddPageNumbers,
+                                    // ページ数を付与しない場合、以下の2つのオプションも選択解除
+                                    createContentList: newAddPageNumbers ? p.createContentList : false,
+                                    addBlankPageForContentList: newAddPageNumbers ? p.addBlankPageForContentList : false
+                                  };
                                 }
                                 return p;
                               });
@@ -707,90 +555,272 @@
                             peer-checked:after:translate-x-[calc(100%-2px)]"
                           >
                           </span>
-                          <span className="ml-2">白紙差込み</span>
+                          <span>ページ数を付与</span>
+                      </label>
+
+                      <input 
+                          type="checkbox" 
+                          id="alignOrientation" 
+                          name="alignOrientation"
+                          checked={pattern.alignOrientation}
+                          onChange={e => {
+                            const updatedPatterns = patterns.map(p => {
+                              if (p.id === pattern.id) {
+                                return { ...p, alignOrientation: e.target.checked };
+                              }
+                              return p;
+                            });
+                            setPatterns(updatedPatterns);
+                          }}
+                      />
+                      <label htmlFor="alignOrientation">資料の向きを合わせる</label>
+
+
+                      {pattern.addPageNumbers && (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={pattern.createContentList}
+                            onChange={e => {
+                              const updatedPatterns = patterns.map(p => {
+                                if (p.id === pattern.id) {
+                                  const newCreateContentList = e.target.checked;
+                                  return { 
+                                    ...p, 
+                                    createContentList: newCreateContentList,
+                                    // ファイル一覧を作成しない場合、以下のオプションも選択解除
+                                    addBlankPageForContentList: newCreateContentList ? p.addBlankPageForContentList : false
+                                  };
+                                }                              return p;
+                              });
+                              setPatterns(updatedPatterns);
+                            }}
+                          />
+                          <span>ファイル一覧を作成</span>
                         </label>
                       )}
+
+                      {pattern.addPageNumbers && pattern.createContentList && (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={pattern.addBlankPageForContentList}
+                            onChange={e => {
+                              const updatedPatterns = patterns.map(p => {
+                                if (p.id === pattern.id) {
+                                  return { ...p, addBlankPageForContentList: e.target.checked };
+                                }
+                                return p;
+                              });
+                              setPatterns(updatedPatterns);
+                            }}
+                          />
+                          <span>ファイル一覧が奇数の場合白紙を差込む</span>
+                        </label>
+                      )}
+
+                        {/* 位置の選択ドロップダウン */}
+                        <select
+                          value={pattern.position}
+                          onChange={e => {
+                            const updatedPatterns = patterns.map(p => {
+                              if (p.id === pattern.id) {
+                                return { ...p, position: e.target.value as 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' };
+                              }
+                              return p;
+                            });
+                            setPatterns(updatedPatterns);
+                          }}
+                        >
+                          <option value="top-left">左上</option>
+                          <option value="top-center">中央上</option>
+                          <option value="top-right">右上</option>
+                          <option value="bottom-left">左下</option>
+                          <option value="bottom-center">中央下</option>
+                          <option value="bottom-right">右下</option>
+                        </select>
+
+                        {/* サイズの選択ドロップダウン */}
+                        <select
+                          value={pattern.size}
+                          onChange={e => {
+                            const updatedPatterns = patterns.map(p => {
+                              if (p.id === pattern.id) {
+                                return { ...p, size: parseInt(e.target.value) };
+                              }
+                              return p;
+                            });
+                            setPatterns(updatedPatterns);
+                          }}
+                        >
+                          {Array.from({ length: 57 }, (_, i) => i + 8).map(size => (
+                            <option key={size} value={size}>{size}px</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
               </div>
-            ))}
-          </div>
-            ))}
+
+              {/* Data part */}
+              {uploadedFiles.map((file, index) => (
+                <div key={file.tempPath} className={`flex`}>
+                  <div className="flex-none w-96 px-4 py-2 border">
+                  <FileRowWithControls
+                      fileName={file.originalName}
+                      isFirst={index === 0}
+                      isLast={index === uploadedFiles.length - 1}
+                      onMoveUp={() => handleMoveFileUp(index)}
+                      onMoveDown={() => handleMoveFileDown(index)}
+                      onRemove={() => handleRemoveFile(index)}
+                      onFileNameChange={(newFileName) => {
+                        const updatedFiles = [...uploadedFiles];
+                        // newFileNameが空欄だった場合、「新しいファイル」を設定
+                        // if (!newFileName || newFileName.trim() === "") {newFileName = "新しいファイル";}
+                        updatedFiles[index].originalName = newFileName;
+                        setUploadedFiles(updatedFiles);
+                      }}
+                      onEditStateChange={(isEditing) => {
+                          if (isEditing) {
+                            setIsEditingFileName(true);
+                          } else
+                            setIsEditingFileName(false);
+                      }}
+                    />
+                    </div>
+              {patterns.map((pattern, index) => (
+                <div key={pattern.id} className={`flex-none w-52 px-4 py-2 border ${index % 2 === 0 ? 'bg-gray-200' : 'bg-gray-300'}`}>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            className="cursor-pointer mr-2"
+                            checked={pattern.selectedFiles?.includes(file.tempPath)}
+                            onChange={e => {
+                              const updatedPatterns = patterns.map(p => {
+                                if (p.id === pattern.id) {
+                                  if (e.target.checked) {
+                                    return { ...p, selectedFiles: p.selectedFiles ? [...p.selectedFiles, file.tempPath] : [file.tempPath] };
+                                  } else {
+                                    return { ...p, selectedFiles: p.selectedFiles?.filter(f => f !== file.tempPath) };
+                                  }
+                                }
+                                return p;
+                              });
+                              setPatterns(updatedPatterns);
+                            }}
+                          />
+                          <span>統合PDFに追加</span>
+                        </label>
+                        <div className="border-t mt-2 mb-2"></div>
+                        {oddPageFiles.includes(file.tempPath) && (
+                          <label className="flex items-center mt-2">
+                            <input
+                              type="checkbox"
+                              className="cursor-pointer mr-2 peer sr-only"
+                              checked={pattern.oddPageFiles.includes(file.tempPath)}
+                              onChange={e => {
+                                const updatedPatterns = patterns.map(p => {
+                                  if (p.id === pattern.id) {
+                                    if (e.target.checked) {
+                                      return { ...p, oddPageFiles: [...p.oddPageFiles, file.tempPath] };
+                                    } else {
+                                      return { ...p, oddPageFiles: p.oddPageFiles.filter(f => f !== file.tempPath) };
+                                    }
+                                  }
+                                  return p;
+                                });
+                                setPatterns(updatedPatterns);
+                              }}
+                            />
+                            <span
+                              className="block w-[2em] cursor-pointer bg-gray-500 rounded-full 
+                              p-[1px] after:block after:h-[1em] after:w-[1em] after:rounded-full 
+                              after:bg-white after:transition peer-checked:bg-blue-500 
+                              peer-checked:after:translate-x-[calc(100%-2px)]"
+                            >
+                            </span>
+                            <span className="ml-2">白紙差込み</span>
+                          </label>
+                        )}
+                </div>
+              ))}
+            </div>
+              ))}
+        
+              {isScrollable && (
+                <div
+                className={`absolute inset-x-0 top-0 h-full bg-white bg-opacity-60 flex justify-center items-center transition-opacity duration-500 ${scrollIndicatorOpacity === 0 ? 'hidden' : 'block'}`}
+                style={{ opacity: scrollIndicatorOpacity }}
+                >
+                <p className="text-lg font-bold">横スクロール可能</p>
+                </div>
+              )}
+
+            </div>
+          )}
+
+            {uploadedFiles.length > 0 && (
+              <button
+                disabled={status === AppStatus.PROCESSING || editingPatternId !== null || isEditingFileName}  
+                className={`mt-5 mb-5 p-2 rounded-lg 
+                            ${status !== AppStatus.PROCESSING && editingPatternId === null && !isEditingFileName
+                              ? "bg-blue-500 text-white hover:bg-blue-600"
+                              : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
+                            }`} 
+                onClick={addPattern}>
+                ＋
+              </button>
+            )}
       
-            {isScrollable && (
-              <div
-              className={`absolute inset-x-0 top-0 h-full bg-white bg-opacity-60 flex justify-center items-center transition-opacity duration-500 ${scrollIndicatorOpacity === 0 ? 'hidden' : 'block'}`}
-              style={{ opacity: scrollIndicatorOpacity }}
-              >
-              <p className="text-lg font-bold">横スクロール可能</p>
-              </div>
+            {uploadedFiles.length > 0 && patterns.length > 0 && (
+              <button 
+                disabled={status === AppStatus.PROCESSING || editingPatternId !== null || isEditingFileName }  
+                className={`mt-5 mb-5 p-2 rounded-lg ml-4 
+                            ${status !== AppStatus.PROCESSING && editingPatternId === null && !isEditingFileName
+                                ? "bg-green-500 text-white hover:bg-green-600" 
+                                : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
+                            }`} 
+                onClick={handleCombinePDFsForAllPatterns}>
+                ファイルを統合する
+            </button>
             )}
 
-          </div>
-        )}
-
-          {uploadedFiles.length > 0 && (
-            <button
-              disabled={status === AppStatus.PROCESSING || editingPatternId !== null || isEditingFileName}  
-              className={`mt-5 mb-5 p-2 rounded-lg 
-                          ${status !== AppStatus.PROCESSING && editingPatternId === null && !isEditingFileName
-                            ? "bg-blue-500 text-white hover:bg-blue-600"
-                            : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
-                          }`} 
-              onClick={addPattern}>
-              ＋
-            </button>
-          )}
-    
-          {uploadedFiles.length > 0 && patterns.length > 0 && (
+          <div className="flex items-center space-x-4 p-5">
             <button 
-              disabled={status === AppStatus.PROCESSING || editingPatternId !== null || isEditingFileName }  
-              className={`mt-5 mb-5 p-2 rounded-lg ml-4 
-                          ${status !== AppStatus.PROCESSING && editingPatternId === null && !isEditingFileName
-                              ? "bg-green-500 text-white hover:bg-green-600" 
-                              : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-70"
-                          }`} 
-              onClick={handleCombinePDFsForAllPatterns}>
-              ファイルを統合する
-          </button>
+              className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
+              onClick={() => setShowSettings(true)}
+              aria-label="設定"
+            >
+              <FaCog />
+            </button>
+            <button 
+              className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
+              onClick={() => setShowLicenses(true)}
+              aria-label="ライセンス情報"
+            >
+              <FaInfoCircle />
+            </button>
+          </div>
+
+
+          <SettingsModal 
+            show={showSettings} 
+            onClose={() => setShowSettings(false)} 
+            handlePathChange={handlePathChange}
+            currentLibreOfficePath={currentLibreOfficePath}
+          />
+
+          {showLicenses && (
+            <LicenseModal show={showLicenses} onClose={() => setShowLicenses(false)} />
           )}
 
-        <div className="flex items-center space-x-4 p-5">
-          <button 
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
-            onClick={() => setShowSettings(true)}
-            aria-label="設定"
-          >
-            <FaCog />
-          </button>
-          <button 
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors" 
-            onClick={() => setShowLicenses(true)}
-            aria-label="ライセンス情報"
-          >
-            <FaInfoCircle />
-          </button>
+          <div className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-red-600 text-white rounded-t ${showError ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-300`}>
+            {errorMessage}
+          </div>
+
+          <div className="fixed bottom-2.5 right-2.5">
+            <CharacterComponent status={status} />
+          </div>  
         </div>
-
-
-        <SettingsModal 
-          show={showSettings} 
-          onClose={() => setShowSettings(false)} 
-          handlePathChange={handlePathChange}
-          currentLibreOfficePath={currentLibreOfficePath}
-        />
-
-        {showLicenses && (
-          <LicenseModal show={showLicenses} onClose={() => setShowLicenses(false)} />
-        )}
-
-        <div className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-red-600 text-white rounded-t ${showError ? 'translate-y-0' : 'translate-y-full'} transition-transform duration-300`}>
-          {errorMessage}
-        </div>
-
-        <div className="fixed bottom-2.5 right-2.5">
-          <CharacterComponent status={status} />
-        </div>
-  
       </div>
-
     );
   }

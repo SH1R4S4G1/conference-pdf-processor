@@ -1,7 +1,7 @@
 // main.ts
 import { app, BrowserWindow,dialog,ipcMain,shell,Dialog } from 'electron';
 import { exec, execSync } from 'child_process';
-import { degrees, PDFDocument, rgb, StandardFonts, PDFName, PDFNumber, PDFDict, PDFRef, PDFString, PDFHexString, PDFPage, PDFAnnotation, PDFArray } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts, PDFName, PDFNumber, PDFDict, PDFRef, PDFString, PDFHexString, PDFPage, PDFAnnotation, PDFArray, PDFFont } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -34,6 +34,12 @@ const libreOfficeDefaultDirAlt = process.platform === 'darwin'
   
 // 設定ファイルの保存場所を指定
 const store = new Store();
+
+interface ContentDataEntry {
+  name: string;
+  startPage: number;
+  // 他のプロパティも必要に応じて定義
+}
 
 // TODO: ウィンドウサイズを変更できないようにする
 // TODO: メニューバーを非表示にする
@@ -625,50 +631,74 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
   const pdfBytes = fs.readFileSync(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  const page = pdfDoc.getPages()[0];
-  let yOffset = 750; 
+  // fontkit を PDFDocument に登録
+  pdfDoc.registerFontkit(fontkit);
+
+  // 外部フォントを読み込む
+  const fontBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'electron', 'assets', 'fonts', 'ipaexm.ttf'));
+  const font = await pdfDoc.embedFont(fontBytes);
+  
   const linkHeight = 25;
 
+  const linkWidth = 500;
+  const lineHeight = 30;  // 1行の高さを30に設定
+  
+  // すべてのエントリのテキストの長さを計算
+  const entriesText = contentData.map((entry: ContentDataEntry) => `${entry.name} ───── ${entry.startPage}ページ`);
+  const entriesLines = entriesText.map((text: string) => wrapText(text, font, 20, linkWidth).length);
+
+  // 必要なページ数を計算
+  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0);
+  const linesPerPage = Math.floor((750 - 50) / lineHeight);  // ページの上端と下端のマージンを考慮
+  const totalPages = Math.ceil(totalLines / linesPerPage);
+
+  // 白紙ページを挿入
+  for (let i = 0; i < totalPages; i++) {
+    pdfDoc.insertPage(0);  // 常に0インデックスに挿入して、以前のページを後ろにずらす
+  }
+
+  let yOffset = 750; 
+  let currentPageIndex = 0;  // ここでページの参照を初期化
+  let page = pdfDoc.getPages()[currentPageIndex];  // 1ページ目を参照
+
   for (const entry of contentData) {
-    const linkRect = {
-      x: 50,
-      y: yOffset - linkHeight,
-      width: 500,
-      height: linkHeight
-    };
-
-    // TODO:枠はいらない？
-    // page.drawRectangle({
-    //   ...linkRect,
-    //   borderColor: rgb(0, 0, 0),
-    //   borderWidth: 1,
-    //   opacity: 0
-    // });    
-
-    // 外部フォントを読み込む
-    pdfDoc.registerFontkit(fontkit);
-    const fontBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'electron', 'assets', 'fonts', 'ipaexm.ttf'));
-    const font = await pdfDoc.embedFont(fontBytes);  
-
     const text = `${entry.name} ───── ${entry.startPage}ページ`;
-    page.drawText(text, {
-      x: linkRect.x,
-      y: linkRect.y,
-      size: 20,
-      font: font,
-      color: rgb(0, 0, 1)
+    const wrappedText = wrapText(text, font, 20, linkWidth);
+
+    wrappedText.forEach((line, idx) => {
+      const y = yOffset - (lineHeight * (idx + 1));
+
+      page.drawText(line, {
+        x: 50,
+        y: y,
+        size: 20,
+        font: font,
+        color: rgb(0, 0, 1)
+      });
+
+      const linkRect = {
+        x: 50,
+        y: y,
+        width: linkWidth,
+        height: lineHeight
+      };
+
+      // Create link annotation with adjusted page index
+      const linkAnnot = createPageLinkAnnotation(pdfDoc, pdfDoc.getPages()[entry.startPage + indexPages - 1 + totalPages].ref, linkRect);
+
+      const annotations = page.node.lookup(PDFName.of('Annots'), PDFArray) || pdfDoc.context.obj([]);
+      annotations.push(linkAnnot);
+      page.node.set(PDFName.of('Annots'), annotations);
     });
 
-    // Create link annotation
-    const linkAnnot = createPageLinkAnnotation(pdfDoc, pdfDoc.getPages()[entry.startPage + indexPages - 1].ref, linkRect); // ここで indexPages を加算
-    
-    // 既存のアノテーションを取得または新しい配列を作成
-    const annotations = page.node.lookup(PDFName.of('Annots'), PDFArray) || pdfDoc.context.obj([]);
-    annotations.push(linkAnnot);
-    page.node.set(PDFName.of('Annots'), annotations);
+    yOffset -= wrappedText.length * lineHeight;
 
-    yOffset -= linkHeight;
-
+    if (yOffset < 50) {
+      // ページの下端に到達した場合、次のページを参照
+      currentPageIndex++;
+      yOffset = 750;
+      page = pdfDoc.getPages()[currentPageIndex];
+    }
   }
 
   const savedPdfBytes = await pdfDoc.save();
@@ -689,4 +719,21 @@ const createPageLinkAnnotation = (pdfDoc: PDFDocument, pageRef: PDFRef, linkRect
   );
 };
 
+// 与えられたテキストを指定された幅で折り返す関数
+const wrapText = (text: string, font: PDFFont, fontSize: number, maxWidth: number) => {
+  let lines = [''];
+  let lineWidth = 0;
 
+  for (const char of text) {
+    const charWidth = font.widthOfTextAtSize(char, fontSize);
+    if (lineWidth + charWidth < maxWidth || char === ' ' && lineWidth === 0) {
+      lines[lines.length - 1] += char;
+      lineWidth += charWidth;
+    } else {
+      lines.push(char);
+      lineWidth = charWidth;
+    }
+  }
+
+  return lines;
+};

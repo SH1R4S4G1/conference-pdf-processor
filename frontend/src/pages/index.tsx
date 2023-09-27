@@ -462,7 +462,7 @@
     // TODO: テーブルが表示されていない間だけ、見かけのドロップエリアを広げる
     return (
       <div>
-          
+        
           <div 
             className="p-5 h-screen w-screen"
             onDrop={onDrop}

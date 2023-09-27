@@ -627,6 +627,30 @@ function decodeTitle(encodedTitle: string): string {
   return decodeURIComponent(encodedTitle);
 }
 
+ipcMain.handle('get-content-page-list-count', async (event, { contentData }) => {
+  // fontkit を PDFDocument に登録
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  // 外部フォントを読み込む
+  const fontBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'electron', 'assets', 'fonts', 'ipaexm.ttf'));
+  const font = await pdfDoc.embedFont(fontBytes);
+
+  const linkWidth = 500;
+  const lineHeight = 30;  // 1行の高さを30に設定
+
+  // すべてのエントリのテキストの長さを計算
+  const entriesText = contentData.map((entry: ContentDataEntry) => `${entry.name} ───── ${entry.startPage}ページ`);
+  const entriesLines = entriesText.map((text: string) => wrapText(text, font, 20, linkWidth).length);
+
+  // 必要なページ数を計算
+  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0);
+  const linesPerPage = Math.floor((750 - 50) / lineHeight);  // ページの上端と下端のマージンを考慮
+  const totalPages = Math.ceil(totalLines / linesPerPage);
+
+  return totalPages;
+});
+
 ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData , indexPages }) => {
   const pdfBytes = fs.readFileSync(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -638,22 +662,11 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
   const fontBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'electron', 'assets', 'fonts', 'ipaexm.ttf'));
   const font = await pdfDoc.embedFont(fontBytes);
   
-  const linkHeight = 25;
-
   const linkWidth = 500;
   const lineHeight = 30;  // 1行の高さを30に設定
   
-  // すべてのエントリのテキストの長さを計算
-  const entriesText = contentData.map((entry: ContentDataEntry) => `${entry.name} ───── ${entry.startPage}ページ`);
-  const entriesLines = entriesText.map((text: string) => wrapText(text, font, 20, linkWidth).length);
-
-  // 必要なページ数を計算
-  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0);
-  const linesPerPage = Math.floor((750 - 50) / lineHeight);  // ページの上端と下端のマージンを考慮
-  const totalPages = Math.ceil(totalLines / linesPerPage);
-
   // 白紙ページを挿入
-  for (let i = 0; i < totalPages; i++) {
+  for (let i = 0; i < indexPages; i++) {
     pdfDoc.insertPage(0);  // 常に0インデックスに挿入して、以前のページを後ろにずらす
   }
 
@@ -683,8 +696,17 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
         height: lineHeight
       };
 
-      // Create link annotation with adjusted page index
-      const linkAnnot = createPageLinkAnnotation(pdfDoc, pdfDoc.getPages()[entry.startPage + indexPages - 1 + totalPages].ref, linkRect);
+      // // Create link annotation with adjusted page index
+      // const linkAnnot = createPageLinkAnnotation(pdfDoc, pdfDoc.getPages()[entry.startPage + indexPages - 1 + totalPages].ref, linkRect);
+
+      const targetPageIndex = entry.startPage + indexPages - 1;
+      console.log('Target Page Index:', targetPageIndex, 'Total Pages:', pdfDoc.getPages().length);
+      const targetPage = pdfDoc.getPages()[targetPageIndex];
+      if (!targetPage) {
+          console.error('Target page is undefined. Skipping this entry.');
+          return;
+      }
+      const linkAnnot = createPageLinkAnnotation(pdfDoc, targetPage.ref, linkRect);
 
       const annotations = page.node.lookup(PDFName.of('Annots'), PDFArray) || pdfDoc.context.obj([]);
       annotations.push(linkAnnot);

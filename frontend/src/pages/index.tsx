@@ -280,26 +280,6 @@
             return { ...file, startPage };
           });
 
-          // 資料一覧のPDFファイルを作成
-          if (pattern.createContentList) {
-            // contentListData配列を生成
-            contentListData = filesWithStartPages.map(file => ({
-                name: file.originalName,
-                pageCount: file.pageCount,
-                startPage: file.startPage  // 開始ページの情報を追加
-            }));
-
-            contentListPdfPath = await window.electron.invoke('create-content-list', contentListData);
-            const pageCount = await window.electron.invoke('get-pdf-page-count', contentListPdfPath);
-            if (pattern.addBlankPageForContentList && pageCount % 2 !== 0) {
-                const newContentListPdfPath = await window.electron.invoke('add-blank-page', contentListPdfPath);
-                contentListPdfPath = newContentListPdfPath;
-            }
-
-            // 資料一覧のページ数を取得（アウトライン用）
-            contentListPageCount = pattern.createContentList ? await window.electron.invoke('get-pdf-page-count', contentListPdfPath) : 0;
-          }
-
           // 処理対象のファイルの白紙差込み
           const combinedFiles = await insertBlankForPattern(pattern, filesToProcess);
 
@@ -313,12 +293,32 @@
           });
 
           // 統合PDFと資料一覧のPDFを結合
-          if (pattern.createContentList && contentListPdfPath) {
-            const finalPdfPath = await window.electron.invoke('combine-pdfs', {
-                files: [contentListPdfPath, tempFilePath],
-                addPageNumbers: false
+          if (pattern.createContentList) {
+
+            // contentListData配列を生成
+            contentListData = filesWithStartPages.map(file => ({
+                name: file.originalName,
+                pageCount: file.pageCount,
+                startPage: file.startPage  // 開始ページの情報を追加
+            }));
+
+            const estimatedContentListPageCount = await window.electron.invoke('get-content-page-list-count', {
+              contentData: contentListData  // 資料一覧のデータ
             });
 
+            let contentListPageCount = estimatedContentListPageCount;  // 資料一覧のページ数を取得
+
+            if (pattern.addBlankPageForContentList && contentListPageCount % 2 !== 0) {
+              contentListPageCount++;  // ページ数を+1する
+            }
+            
+            // ファイル一覧を作成する場合、アウトラインと同時にリンクを作成する
+            await window.electron.invoke('add-links-to-content-list', {
+              pdfPath: tempFilePath,
+              contentData: contentListData,
+              indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
+            });
+            
             if (pattern.createContentList) {
               // outlines配列を生成
               const outlines = filesWithStartPages.map(file => ({
@@ -328,22 +328,13 @@
 
               // アウトラインを追加
               await window.electron.invoke('create-outline', {
-                pdfPath: finalPdfPath,
+                pdfPath: tempFilePath,
                 outlines: outlines,
                 indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
               });
             }
 
-            // ファイル一覧を作成する場合、アウトラインと同時にリンクを作成する
-            if (pattern.createContentList) {
-              await window.electron.invoke('add-links-to-content-list', {
-                pdfPath: finalPdfPath,
-                contentData: contentListData,
-                indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
-              });
-            }
-
-            await window.electron.invoke('open-file', finalPdfPath);  // 合成したPDFを開く
+            await window.electron.invoke('open-file', tempFilePath);  // 合成したPDFを開く
           } else {
             await window.electron.invoke('open-file', tempFilePath);  // 合成したPDFを開く
           }

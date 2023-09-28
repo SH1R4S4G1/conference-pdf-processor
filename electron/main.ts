@@ -644,7 +644,9 @@ ipcMain.handle('get-content-page-list-count', async (event, { contentData }) => 
   const entriesLines = entriesText.map((text: string) => wrapText(text, font, 20, linkWidth).length);
 
   // 必要なページ数を計算
-  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0);
+  // エントリ間のスペース分も行数に加算 (contentData.length - 1) 
+  // (最後のエントリの後にはスペースは不要なので -1)
+  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0) + contentData.length - 1; 
   const linesPerPage = Math.floor((750 - 50) / lineHeight);  // ページの上端と下端のマージンを考慮
   const totalPages = Math.ceil(totalLines / linesPerPage);
 
@@ -677,6 +679,16 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
   for (const entry of contentData) {
     const text = `${entry.name} ───── ${entry.startPage}ページ`;
     const wrappedText = wrapText(text, font, 20, linkWidth);
+
+    // Check if adding this entry will exceed the page height
+    if (yOffset - ((wrappedText.length + 1) * lineHeight) < 50) { // +1 for the space line
+        // If it does, move to the next page
+        currentPageIndex++;
+        yOffset = 750;
+        page = pdfDoc.getPages()[currentPageIndex];
+    }
+
+    yOffset -= lineHeight; // Adding a space line
 
     wrappedText.forEach((line, idx) => {
       const y = yOffset - (lineHeight * (idx + 1));
@@ -713,14 +725,8 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
       page.node.set(PDFName.of('Annots'), annotations);
     });
 
-    yOffset -= wrappedText.length * lineHeight;
+    yOffset -= wrappedText.length * lineHeight; 
 
-    if (yOffset < 50) {
-      // ページの下端に到達した場合、次のページを参照
-      currentPageIndex++;
-      yOffset = 750;
-      page = pdfDoc.getPages()[currentPageIndex];
-    }
   }
 
   const savedPdfBytes = await pdfDoc.save();

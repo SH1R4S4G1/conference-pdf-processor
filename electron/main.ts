@@ -627,7 +627,7 @@ function decodeTitle(encodedTitle: string): string {
   return decodeURIComponent(encodedTitle);
 }
 
-ipcMain.handle('get-content-page-list-count', async (event, { contentData }) => {
+ipcMain.handle('get-content-page-list-count', async (event, { contentData, meetingTitle }) => {
   // fontkit を PDFDocument に登録
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -639,21 +639,34 @@ ipcMain.handle('get-content-page-list-count', async (event, { contentData }) => 
   const linkWidth = 500;
   const lineHeight = 30;  // 1行の高さを30に設定
 
+  const titleWidth = 500;  // 会議タイトルの幅を560に設定
+  const titleHeight = 30;  // 1行の高さを10に設定?
+  
   // すべてのエントリのテキストの長さを計算
   const entriesText = contentData.map((entry: ContentDataEntry) => `${entry.name} ───── ${entry.startPage}ページ`);
   const entriesLines = entriesText.map((text: string) => wrapText(text, font, 20, linkWidth).length);
 
+  let wrappedMeetingName: string[] = [];
+
+  // 会議タイトルが存在して、かつ空でない場合に、そのテキストを折り返して配列に代入
+  if (meetingTitle && meetingTitle.trim() !== '') {
+    wrappedMeetingName = wrapText(meetingTitle, font, 20, titleWidth);
+  }
+
   // 必要なページ数を計算
   // エントリ間のスペース分も行数に加算 (contentData.length - 1) 
   // (最後のエントリの後にはスペースは不要なので -1)
-  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0) + contentData.length - 1; 
+  // wrappedMeetingName.length を使用して会議タイトルの行数を取得
+  const totalLines = entriesLines.reduce((sum: number, lines: number) => sum + lines, 0) 
+                  + contentData.length - 1 
+                  + wrappedMeetingName.length; 
   const linesPerPage = Math.floor((750 - 50) / lineHeight);  // ページの上端と下端のマージンを考慮
   const totalPages = Math.ceil(totalLines / linesPerPage);
 
   return totalPages;
 });
 
-ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData , indexPages }) => {
+ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData, indexPages, meetingTitle }) => {
   const pdfBytes = fs.readFileSync(pdfPath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
@@ -667,6 +680,9 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
   const linkWidth = 500;
   const lineHeight = 30;  // 1行の高さを30に設定
   
+  const titleWidth = 500;  // 会議タイトルの幅を560に設定
+  const titleHeight = 30;  // 1行の高さを10に設定?
+  
   // 白紙ページを挿入
   for (let i = 0; i < indexPages; i++) {
     pdfDoc.insertPage(0);  // 常に0インデックスに挿入して、以前のページを後ろにずらす
@@ -675,6 +691,24 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
   let yOffset = 750; 
   let currentPageIndex = 0;  // ここでページの参照を初期化
   let page = pdfDoc.getPages()[currentPageIndex];  // 1ページ目を参照
+
+  // 会議タイトルのPDFへの追加
+  if (meetingTitle) {
+    const wrappedMeetingName = wrapText(meetingTitle, font, 20, titleWidth);
+    wrappedMeetingName.forEach((line, idx) => {
+      const y = yOffset - (titleHeight * idx);  // 修正: lineHeight を titleHeight に変更
+      page.drawText(line, {
+        x: 50,
+        y: y,
+        size: 20,
+        font: font,
+        color: rgb(0, 0, 0)  // 会議タイトルの色を黒に設定
+      });
+    });
+  
+    yOffset -= titleHeight * 2;  // 修正: 会議タイトルの下にスペースを追加
+  }
+
 
   for (const entry of contentData) {
     const text = `${entry.name} ───── ${entry.startPage}ページ`;
@@ -694,7 +728,7 @@ ipcMain.handle('add-links-to-content-list', async (event, { pdfPath, contentData
       const y = yOffset - (lineHeight * (idx + 1));
 
       page.drawText(line, {
-        x: 50,
+        x:50,
         y: y,
         size: 20,
         font: font,

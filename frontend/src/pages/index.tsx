@@ -64,6 +64,11 @@
     // ファイル名が編集中かどうか
     const [isEditingFileName, setIsEditingFileName] = useState(false);
 
+    // 会議名の編集
+    const [meetingTitle, setMeetingTitle] = useState<string | null>('新しい会議');
+    const [editingTitleId, setEditingTitleId] = useState(null);
+    const [meetingTitleisEditing, setMeetingTitleIsEditing] = useState(false);
+  
     // パターン名の編集
     const [editingPatternId, setEditingPatternId] = useState<number | null>(null);
     const patternInputRef = useRef<HTMLInputElement | null>(null);
@@ -303,7 +308,8 @@
             }));
 
             const estimatedContentListPageCount = await window.electron.invoke('get-content-page-list-count', {
-              contentData: contentListData  // 資料一覧のデータ
+              contentData: contentListData,  // 資料一覧のデータ
+              meetingName: meetingTitle  // ここで会議名を渡す
             });
 
             let contentListPageCount = estimatedContentListPageCount;  // 資料一覧のページ数を取得
@@ -316,7 +322,8 @@
             await window.electron.invoke('add-links-to-content-list', {
               pdfPath: tempFilePath,
               contentData: contentListData,
-              indexPages: contentListPageCount  // ここで資料一覧のページ数を渡す
+              indexPages: contentListPageCount,  // ここで資料一覧のページ数を渡す
+              meetingTitle: meetingTitle  // ここで会議名を渡す
             });
             
             if (pattern.createContentList) {
@@ -482,7 +489,38 @@
 
 
           {uploadedFiles.length > 0 && (
-            <div id="tableWrapper" className="mt-10 relative overflow-x-auto">
+          <div className='mt-10'>
+
+            <div className="meeting-title-editor p-5">
+                  <div className={meetingTitleisEditing ? 'editing' : ''}>
+                    {!meetingTitleisEditing ? (
+                      <span 
+                          className="text-2xl font-bold cursor-pointer hover:bg-gray-200 transition ease-in duration-200 p-4 rounded-md"
+                          style={{ minWidth: '800px' }} // Add inline style for minimum width
+                          onClick={() => setMeetingTitleIsEditing(true)} // Enable editing on click
+                      >
+                        {meetingTitle || <span className="text-gray-400">会議名なし</span>} 
+                      </span>
+                    ) : (
+                      <input
+                        type="text"
+                        value={meetingTitle || ''}  // Make sure the value is not null
+                        onChange={e => setMeetingTitle(e.target.value || null)} // Allow null value
+                        onBlur={() => setMeetingTitleIsEditing(false)} // Disable editing when focus is lost
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            setMeetingTitleIsEditing(false);  // エンターキーが押されたら編集モードを終了
+                            e.preventDefault();  // エンターキーのデフォルトの動作（例えば、フォームの送信）をキャンセル
+                          }
+                        }}
+                        className="border-b-2 border-gray-400 text-2xl font-bold"
+                        autoFocus
+                      />
+                    )}
+                  </div>
+                </div>
+          
+            <div id="tableWrapper" className="relative overflow-x-auto">
 
               {/* Header part */}
               <div className="flex">
@@ -746,6 +784,7 @@
               )}
 
             </div>
+          </div>
           )}
 
             {uploadedFiles.length > 0 && (
@@ -812,5 +851,6 @@
           </div>  
         </div>
       </div>
+      
     );
   }

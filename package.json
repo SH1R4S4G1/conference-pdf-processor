@@ -1,6 +1,6 @@
 {
   "name": "conference-pdf-processor",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A PDF processor for conferences.",
   "main": "./build_electron/electron/main.js",
   "scripts": {
@@ -13,8 +13,8 @@
     "start:electron": "tsc && electron ./build_electron/electron/main.js",
     "start:electron:dev": "cross-env NODE_ENV=development electron ./build_electron/electron/main.js",
     "start:electron:prod": "cross-env NODE_ENV=production electron ./build_electron/electron/main.js",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "pack": "tsc && electron-builder --dir",
+    "dist": "tsc && electron-builder"
   },
   "build": {
     "appId": "net.smart9b.conference-pdf-processor",

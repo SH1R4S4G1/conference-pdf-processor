@@ -239,9 +239,15 @@
           console.log(pageCount);
           if (pageCount % 2 !== 0) {
             console.log("ページ数が奇数です。");
-            console.log("oddPageFiles更新前");
+      
+            // oddPageFiles ステートにファイルパスを追加
             setOddPageFiles(prevFiles => [...prevFiles, outputFilePath]);
-            console.log("oddPageFiles更新後");
+      
+            // 各パターンの oddPageFiles にもファイルパスを追加、デフォルトでTrueにするため
+            setPatterns(prevPatterns => prevPatterns.map(p => ({
+              ...p,
+              oddPageFiles: [...p.oddPageFiles, outputFilePath]
+            })));
           }
 
           // オリジナルのファイル名、ページ数を保存
@@ -374,10 +380,10 @@
       const newPattern: Pattern = {
         id: Date.now(),  // ユニークなIDを設定
         name: `Pattern ${patterns.length + 1}`,  // 初期名を設定
-        addPageNumbers: false,
-        createContentList: false,
-        addBlankPageForContentList: false,  
-        oddPageFiles: [],
+        addPageNumbers: true,
+        createContentList: true,
+        addBlankPageForContentList: true,  
+        oddPageFiles: oddPageFiles,
         selectedFiles: uploadedFiles.map(file => file.tempPath),  // すべてのファイルをデフォルトで選択する
         position: 'bottom-right',
         size: 16,
@@ -619,7 +625,8 @@
                                     // ファイル一覧を作成しない場合、以下のオプションも選択解除
                                     addBlankPageForContentList: newCreateContentList ? p.addBlankPageForContentList : false
                                   };
-                                }                              return p;
+                                }
+                                return p;
                               });
                               setPatterns(updatedPatterns);
                             }}

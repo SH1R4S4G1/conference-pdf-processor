@@ -59,7 +59,7 @@ const createWindow = async () => {
     width: 800,
     height: 600,
     resizable: false,
-    autoHideMenuBar: true,
+    // autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false, // セキュリティ上の理由で推奨
       contextIsolation: true,
@@ -216,6 +216,31 @@ async function convertToPdfUsingLibreOffice(filePath: string, outputFilePath: st
 // OSの一時フォルダを取得
 ipcMain.handle('get-os-tmpdir', () => {
   return appTempDir;
+});
+
+// アプリケーションのインストール確認
+ipcMain.handle('get-app-installation-status', () => {
+  return {
+    isWINWORDInstalled: isWordInstalled,
+    isEXCELInstalled: isExcelInstalled,
+    isPOWERPNTInstalled: isPowerPointInstalled,
+    isLibreOfficeInstalled: isLibreOfficeInstalledFlag,
+  };
+});
+
+// アプリケーションのインストール状況を更新
+ipcMain.handle('update-app-installation-status', async (event, status) => {
+  console.log("UPDATE: Received app installation status:", status);
+  isWordInstalled = status.isWINWORDInstalled;
+  isExcelInstalled = status.isEXCELInstalled;
+  isPowerPointInstalled = status.isPOWERPOINTInstalled;
+  isLibreOfficeInstalledFlag = status.isLibreOfficeInstalled;
+  console.log("UPDATE: Word installed:", isWordInstalled);
+  console.log("UPDATE: Excel installed:", isExcelInstalled);
+  console.log("UPDATE: PowerPoint installed:", isPowerPointInstalled);
+  console.log("UPDATE: LibreOffice installed:", isLibreOfficeInstalledFlag);
+
+  return isWordInstalled && isExcelInstalled && isPowerPointInstalled && isLibreOfficeInstalledFlag;
 });
 
 // ファイルを一時フォルダに保存

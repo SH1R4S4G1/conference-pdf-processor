@@ -42,6 +42,15 @@
     // ファイルのドラッグ＆ドロップに関するステート
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+    // アプリケーションのインストール状況に関するステート
+    // electron側からの読み込みが完了するまでundefinedのままになる。
+    // これにより、アプリケーションのインストール状況を読み込む前に、アプリケーションのインストール状況を更新することを防ぐ。
+    const [isWINWORDInstalled, setIsWINWORDInstalled] = useState<boolean | undefined>(undefined);
+    const [isEXCELInstalled, setIsEXCELInstalled] = useState<boolean | undefined>(undefined);
+    const [isPOWERPOINTInstalled, setIsPOWERPNTInstalled] = useState<boolean | undefined>(undefined);
+    const [isLibreOfficeInstalled, setIsLibreOfficeInstalled] = useState<boolean | undefined>(undefined);
+    
+
     // 生のファイル一覧
     const [fileList, setFileList] = useState<string[]>([]);
 
@@ -88,8 +97,23 @@
     }, [fileList]);
     
     useEffect(() => {
+      if (window.electron) {
+        window.electron.invoke('get-app-installation-status').then(status => {
+          setIsWINWORDInstalled(status.isWINWORDInstalled);
+          setIsEXCELInstalled(status.isEXCELInstalled);
+          setIsPOWERPNTInstalled(status.isPOWERPNTInstalled);
+          setIsLibreOfficeInstalled(status.isLibreOfficeInstalled);
+          console.log("App installation status:", status);
+        }).catch(error => {
+          console.error("Error fetching Office installation status:", error);
+        });
+
+      } else {
+        console.error("window.electron is not defined");
+      }
+
     }, []);
-     // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
+    // 依存配列が空なので、このuseEffectはマウント時にのみ実行されます。
 
      // DEV:ページ数が奇数のファイルの変更を監視
     useEffect(() => {
@@ -102,6 +126,16 @@
       }).catch(error => {
         console.error("Error fetching LibreOffice path:", error);
       });
+
+      // window.electron.invoke('get-app-installation-status').then(status => {
+      //   setIsWINWORDInstalled(status.isWINWORDInstalled);
+      //   setIsEXCELInstalled(status.isEXCELInstalled);
+      //   setIsPOWERPNTInstalled(status.isPOWERPNTInstalled);
+      //   setIsLibreOfficeInstalled(status.isLibreOfficeInstalled);
+      // }).catch(error => {
+      //   console.error("Error fetching Office installation status:", error);
+      // });
+
     }, [showSettings]);
     
     useEffect(() => {
@@ -176,6 +210,31 @@
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }, [editingPatternId]);
+
+    // アプリケーションのインストール状況が変更されたときに Electron にその情報を送信
+    useEffect(() => {
+      if (typeof isWINWORDInstalled === 'boolean' && typeof isEXCELInstalled === 'boolean' && typeof isPOWERPOINTInstalled === 'boolean' && typeof isLibreOfficeInstalled === 'boolean') { // 全ての状態が boolean であることを確認
+        const installAppStatus = {
+          isWINWORDInstalled,
+          isEXCELInstalled,
+          isPOWERPOINTInstalled,
+          isLibreOfficeInstalled
+        };
+      
+        console.log("App installation status has changed:", installAppStatus);
+
+        window.electron.invoke('update-app-installation-status', installAppStatus).then(response => {
+          console.log(response);  // Updatedのメッセージをログに表示
+        }).catch(error => {
+          console.error("Error updating Office installation status:", error);
+        });
+
+        // LibreOfficeがインストールされていない、かつ、Officeのアプリもインストールされていない場合に設定画面を表示
+        if(isLibreOfficeInstalled === false && (isWINWORDInstalled === false || isEXCELInstalled === false || isPOWERPOINTInstalled === false)) {
+          setShowSettings(true);
+         }
+      }
+    }, [isWINWORDInstalled, isEXCELInstalled, isPOWERPOINTInstalled, isLibreOfficeInstalled]); // 依存配列にインストール状況のステートを含めます。
 
     const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -843,6 +902,13 @@
             onClose={() => setShowSettings(false)} 
             handlePathChange={handlePathChange}
             currentLibreOfficePath={currentLibreOfficePath}
+            isWINWORDInstalled ={isWINWORDInstalled}
+            isEXCELInstalled={isEXCELInstalled}
+            isPOWERPOINTInstalled={isPOWERPOINTInstalled}
+            isLibreOfficeInstalled={isLibreOfficeInstalled}
+            setIsWINWORDInstalled={setIsWINWORDInstalled}
+            setIsEXCELInstalled={setIsEXCELInstalled}
+            setIsPOWERPONTInstalled={setIsPOWERPNTInstalled}
           />
 
           {showLicenses && (

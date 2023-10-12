@@ -59,7 +59,7 @@ const createWindow = async () => {
     width: 800,
     height: 600,
     resizable: false,
-    // autoHideMenuBar: true,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false, // セキュリティ上の理由で推奨
       contextIsolation: true,

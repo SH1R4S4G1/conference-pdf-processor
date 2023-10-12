@@ -280,13 +280,25 @@
 
           console.log(fileExt, file.type, file.path, outputFilePath);
           
+
           // ファイルの種類に応じて、変換処理を実行
           if (['doc', 'docx'].includes(fileExt || '')) {
-            console.log(outputFilePath);
+            if (!isWINWORDInstalled && !isLibreOfficeInstalled) {
+              displayError('ドキュメントを処理できるアプリケーションが見つかりません。スキップ: ' + file.name);
+              continue;  // 次のファイルに進む
+            }
             await window.electron.invoke('convert-word-to-pdf', file.path, outputFilePath);
           } else if (['xls', 'xlsx'].includes(fileExt || '')) {
+            if (!isEXCELInstalled && !isLibreOfficeInstalled) {
+              displayError('エクセルを処理できるアプリケーションが見つかりません。スキップ: ' + file.name);
+              continue;  // 次のファイルに進む
+            }
             await window.electron.invoke('convert-excel-to-pdf', file.path, outputFilePath);
           } else if (['ppt', 'pptx'].includes(fileExt || '')) {
+            if (!isPOWERPOINTInstalled && !isLibreOfficeInstalled) {
+              displayError('プレゼンテーションを処理できるアプリケーションが見つかりません。スキップ: ' + file.name);
+              continue;  // 次のファイルに進む
+            }
             await window.electron.invoke('convert-ppt-to-pdf', file.path, outputFilePath);
           } else if (file.type === 'application/pdf') {
             // PDFファイルの場合、そのまま一時保存ディレクトリに保存
@@ -317,7 +329,7 @@
         } else {
           setStatus(AppStatus.ERROR);
           displayError(`${file.name}はサポートされていないファイル形式です。`);
-          // alert(`${file.name} is not a supported file type.`);
+          continue;
         }
       }
     };

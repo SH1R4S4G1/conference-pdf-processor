@@ -558,9 +558,17 @@
               ファイルをドロップ
               (
               <FaFilePdf size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-              <FaFileWord size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-              <FaFileExcel size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
-              <FaFilePowerpoint size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+
+              {isWINWORDInstalled && (
+                <FaFileWord size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              )}
+              {isEXCELInstalled && (
+                <FaFileExcel size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              )}
+              {isPOWERPOINTInstalled && (
+                <FaFilePowerpoint size={26} color="gray" className="px-2 py-1 hover:bg-black-100 rounded"/>
+              )}
+
               )
             </div>
 

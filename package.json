@@ -1,6 +1,6 @@
 {
   "name": "conference-pdf-processor",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A PDF processor for conferences.",
   "main": "./build_electron/electron/main.js",
   "scripts": {
